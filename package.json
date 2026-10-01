@@ -20,6 +20,8 @@
   },
   "description": "本地运行的 QQ AI 聊天与管理员工作桥接",
   "license": "MIT",
+  "repository": {"type":"git","url":"https://github.com/pinkman987/qq-codex-bridge.git"},
+  "bugs": {"url":"https://github.com/pinkman987/qq-codex-bridge/issues"},
   "files": [
     "src/",
     "public/",

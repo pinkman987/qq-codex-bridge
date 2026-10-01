@@ -1,5 +1,9 @@
 # QQ Codex Bridge
 
+[![Checks](https://github.com/pinkman987/qq-codex-bridge/actions/workflows/ci.yml/badge.svg)](https://github.com/pinkman987/qq-codex-bridge/actions/workflows/ci.yml)
+
+[源码仓库](https://github.com/pinkman987/qq-codex-bridge) · [下载测试版](https://github.com/pinkman987/qq-codex-bridge/releases)
+
 本机运行的 QQ AI 聊天与管理员工作桥接。聊天可选择 Codex 登录或 OpenAI 兼容接口；管理员项目任务使用 Codex。聊天、群聊和项目任务分开处理，控制台管理连接、人设、记忆、主动聊天和记录蒸馏。
 
 **0.2.0-beta.1 · Windows 10/11 本地公开测试版。** 需要 Node.js 22.13+，自行准备 QQ/OneBot 和模型服务。当前不是免配置的云服务，也不包含 QQ 或 SnowLuma。尚需其他电脑上的真实账号验收，见 [发布验收](docs/RELEASE.md)。
