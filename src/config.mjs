@@ -11,6 +11,7 @@ export function validateConfig(input, previous = defaults) {
   const cfg = { ...structuredClone(previous), ...input,
     onebot: { ...previous.onebot, ...input.onebot }, social: { ...previous.social, ...input.social },
     chat: { ...defaults.chat, ...previous.chat, ...input.chat },
+    voice: { ...defaults.voice, ...previous.voice, ...input.voice },
     outreach: { ...defaults.outreach, ...previous.outreach, ...input.outreach } };
   if (typeof cfg.enabled !== 'boolean') fail('enabled','启用 QQ 桥接必须是开关值');
   cfg.ownerQQ = String(cfg.ownerQQ || '').trim();
@@ -37,6 +38,26 @@ export function validateConfig(input, previous = defaults) {
   cfg.chat.model=cfg.chat.model.trim();
   if(cfg.chat.provider==='openai'&&!cfg.chat.model)fail('apiModel','使用兼容接口时必须填写模型名称');
   if(cfg.chat.provider==='openai'&&!cfg.chat.apiKey&& !['127.0.0.1','localhost','[::1]'].includes(apiUrl.hostname))fail('apiKey','请填写该服务的 API Key；本机模型可留空');
+  if(typeof cfg.voice.enabled!=='boolean')fail('voiceEnabled','语音识别必须是开关值');
+  cfg.voice.mode??='transcribe';
+  if(!['transcribe','omni'].includes(cfg.voice.mode))fail('voiceMode','请选择语音转写或 Omni 原生聊天');
+  if(typeof cfg.voice.baseUrl!=='string')fail('voiceBase','语音识别服务地址格式不正确');
+  cfg.voice.baseUrl=cfg.voice.baseUrl.trim().replace(/\/+$/,'');
+  let voiceUrl;try{voiceUrl=new URL(cfg.voice.baseUrl);}catch{fail('voiceBase','请填写有效的语音识别服务地址');}
+  const localVoice=['127.0.0.1','localhost','[::1]'].includes(voiceUrl.hostname);
+  if(!['https:','http:'].includes(voiceUrl.protocol)||voiceUrl.username||voiceUrl.password||voiceUrl.search||voiceUrl.hash||(voiceUrl.protocol==='http:'&&!localVoice))fail('voiceBase','语音识别使用 HTTPS；本机服务可使用 HTTP，地址不能带密钥');
+  if(typeof cfg.voice.model!=='string'||cfg.voice.model.length>120)fail('voiceModel','语音模型名称最多120字符');
+  cfg.voice.model=cfg.voice.model.trim();
+  if(cfg.voice.mode==='omni'&&cfg.voice.enabled&&!/^qwen3\.8-omni-flash(?:-[\w-]+)?$/.test(cfg.voice.model))fail('voiceModel','原生 Omni 模式请使用 qwen3.8-omni-flash 或对应快照，不支持 realtime 型号');
+  if(cfg.voice.mode==='omni'&&/realtime/.test(cfg.voice.model))fail('voiceModel','实时语音模型使用另一种协议，请填写 qwen3.8-omni-flash');
+  if(typeof cfg.voice.apiKey!=='string'||cfg.voice.apiKey.length>4096||/[\r\n]/.test(cfg.voice.apiKey))fail('voiceKey','语音 API Key 格式不正确');
+  if(cfg.voice.enabled&&!cfg.voice.model)fail('voiceModel','开启语音识别前请填写模型名称');
+  if(cfg.voice.enabled&&!localVoice&&!cfg.voice.apiKey)fail('voiceKey','开启语音识别前请填写该服务的 API Key');
+  for(const [key,field,min,max]of [['memoryTurns','memoryTurns',1,30],['contextChars','contextChars',2000,20000],['mergeDelayMs','mergeDelayMs',0,5000],['mergeMaxWaitMs','mergeMaxWaitMs',100,10000]]){
+    cfg.social[key]??=defaults.social[key];
+    if(!Number.isInteger(cfg.social[key])||cfg.social[key]<min||cfg.social[key]>max)fail(field,`${field} 必须为 ${min}–${max} 的整数`);
+  }
+  if(cfg.social.mergeMaxWaitMs<cfg.social.mergeDelayMs)fail('mergeMaxWaitMs','最长聚合等待必须大于或等于聚合窗口');
   if (typeof cfg.persona !== 'string' || cfg.persona.length > 6000) fail('persona','人设最多 6000 字符');
   if (typeof cfg.basePersona !== 'string' || cfg.basePersona.length > 6000) fail('basePersona','基础规则必须是 6000 字符内的文本');
   if (typeof cfg.social.proactive !== 'boolean') fail('proactive','插话开关格式不正确');

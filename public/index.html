@@ -355,6 +355,10 @@
         </div>
 </div></details>
         <div class="switch-row"><div><label for="proactive">偶尔主动参与群聊</label><small>关闭后，群里只有被 @ 才会回复。</small></div><input id="proactive" type="checkbox" role="switch"></div>
+        <div class="fields two">
+          <div class="field"><label for="mergeDelayMs">连续消息聚合窗口（毫秒）</label><input id="mergeDelayMs" inputmode="numeric" aria-describedby="mergeDelayMsError"><small>0–5000，默认700。连续补充会合并理解；0表示尽快处理。</small><p id="mergeDelayMsError" class="field-error" hidden></p></div>
+          <div class="field"><label for="mergeMaxWaitMs">最长聚合等待（毫秒）</label><input id="mergeMaxWaitMs" inputmode="numeric" aria-describedby="mergeMaxWaitMsError"><small>100–10000，默认2000。持续输入也不会无限等候；不包括模型推理时间。</small><p id="mergeMaxWaitMsError" class="field-error" hidden></p></div>
+        </div>
         <div class="fields three">
           <div class="field"><label for="probability">插话概率（%）</label><input id="probability" type="text" inputmode="numeric" autocomplete="off" aria-describedby="probabilityHint probabilityError"><small id="probabilityHint">0–50%，只影响主动插话。</small><p id="probabilityError" class="field-error" hidden></p></div>
           <div class="field"><label for="cooldown">插话间隔（秒）</label><input id="cooldown" type="text" inputmode="numeric" autocomplete="off" aria-describedby="cooldownHint cooldownError"><small id="cooldownHint">30–86400 秒。</small><p id="cooldownError" class="field-error" hidden></p></div>
@@ -364,6 +368,11 @@
       <details id="socialMemory" class="panel settings">
         <summary><div><div class="eyebrow">记得你说过的话</div><h2>记忆与待续话题</h2><p>事实、对话和人设分别保存；可以修正或删除</p></div><span class="expand-cue"></span></summary>
         <div class="details-body">
+          <p id="companionUpgrade" class="notice" hidden>后台尚未加载本次更新。请重启机器人桥接；输入的设置会保留，更新前暂不提交新配置。</p>
+          <div class="fields two">
+            <div class="field"><label for="memoryTurns">最近对话轮数</label><input id="memoryTurns" inputmode="numeric" aria-describedby="memoryTurnsError"><small>1–30 轮，默认15；更早的内容保留为带来源摘录和长期记忆。</small><p id="memoryTurnsError" class="field-error" hidden></p></div>
+            <div class="field"><label for="contextChars">历史资料字符预算</label><input id="contextChars" inputmode="numeric" aria-describedby="contextCharsError"><small>2000–20000 字符，默认6000。优先相关记忆和最近消息；人设与当前消息另外保留，字符数不等于 token。</small><p id="contextCharsError" class="field-error" hidden></p></div>
+          </div>
           <label for="memoryScope">查看会话</label><select id="memoryScope"></select>
           <p id="moodState" class="test-result"></p>
           <button type="button" id="memoryRefresh" class="secondary">刷新记忆</button>
@@ -459,6 +468,18 @@
             <p class="local-note">使用后，聊天内容会发送到你填写的服务，费用由该 API Key 所属账户承担。</p>
             <button id="testChat" type="button" class="secondary">测试模型连接</button><p id="testResult" class="test-result" role="status" aria-live="polite"></p>
           </div>
+          <details><summary>Omni 与语音接口<span class="expand-cue"></span></summary>
+            <div class="field"><label for="voiceMode">语音处理方式</label><select id="voiceMode" aria-describedby="voiceModeError"><option value="omni">Qwen Omni · 直接听音频并回答</option><option value="transcribe">语音转写 · 原聊天模型回答</option></select><p id="voiceModeError" class="field-error" hidden></p></div>
+            <button id="omniPreset" type="button" class="secondary">使用 Qwen3.8 Omni 配置</button>
+            <div class="switch-row"><div><label for="voiceEnabled">启用 Omni / 语音接口</label><small>默认关闭。填好地址、模型和密钥再开启；回复为文字。</small></div><input id="voiceEnabled" type="checkbox" role="switch"></div>
+            <p id="omniHint" class="local-note" hidden>Omni 开启后，闲聊文字、图片、语音和主动聊天统一使用下方模型与密钥；上方聊天模型暂不参与闲聊，工作任务继续用 Codex。语音直接理解，不先转写。填写百炼对应业务空间和地域的 Chat Completions 基础地址。</p>
+            <div class="field"><label for="voiceBase">Omni / 语音服务地址</label><input id="voiceBase" type="text" spellcheck="false" autocomplete="off" placeholder="填写服务商的 API 基础地址" aria-describedby="voiceBaseError"><small id="voiceProtocolHint">语音转写需支持 /audio/transcriptions。</small><p id="voiceBaseError" class="field-error" hidden></p></div>
+            <div class="field"><label for="voiceModel">Omni / 语音模型名称</label><input id="voiceModel" spellcheck="false" autocomplete="off" placeholder="填写服务商提供的模型 ID" aria-describedby="voiceModelError"><p id="voiceModelError" class="field-error" hidden></p></div>
+            <div class="field"><div class="label-row"><label for="voiceKey">Omni / 语音 API Key</label><span id="voiceKeyState" class="tag">尚未保存语音密钥</span></div><input id="voiceKey" type="password" autocomplete="new-password" aria-describedby="voiceKeyError"><small>独立保存，不回显，也不自动复用聊天密钥。更换服务商需重新填写。</small><p id="voiceKeyError" class="field-error" hidden></p></div>
+            <label class="check-row"><input id="clearVoiceKey" type="checkbox">删除已保存的语音密钥</label>
+            <p id="voiceLimits" class="local-note">需要 OneBot 支持 get_record 及 WAV/MP3 转换。语音转写：单文件最多20 MiB、识别请求最多30秒。费用由下方密钥所属账户承担。</p>
+            <button id="testOmni" type="button" class="secondary" hidden>测试 Omni 连接（仅固定文字）</button><p id="omniTestResult" class="test-result" role="status" aria-live="polite"></p>
+          </details>
         </div>
       </details>
       <details id="outreachSettings" class="panel settings">
@@ -504,7 +525,7 @@
       <section id="metricsPanel" class="panel">
         <div class="eyebrow">运行统计 / 从本次升级开始</div><h2>回复速度与用量</h2>
         <div class="overview metrics-grid"><div><span>今日模型调用</span><strong id="metricCalls">0</strong></div><div><span>平均模型耗时</span><strong id="metricLatency">—</strong></div><div><span>输入 / 输出 token</span><strong id="metricTokens">—</strong></div><div><span>等待处理的消息</span><strong id="metricQueue">0</strong></div></div>
-        <p id="metricDetail" class="test-result"></p><small>token 按服务返回的 usage 统计。未返回的用量显示为未知，不能当作零；账单以模型服务商为准。</small>
+        <p id="metricDetail" class="test-result"></p><p id="metricAggregation" class="test-result"></p><small>token 按服务返回的 usage 统计。未返回的用量显示为未知，不能当作零；账单以模型服务商为准。</small>
         <details><summary>近期模型调用<span class="expand-cue"></span></summary><div id="metricRecent" class="logs"></div></details>
         <details><summary>为什么主动聊天发送或保持安静<span class="expand-cue"></span></summary><div id="metricDecisions" class="logs"></div></details>
       </section>

@@ -22,18 +22,42 @@ export function relayIntent(text){
 }
 
 const stripSilent=text=>String(text||'').split(/\r?\n/).filter(line=>line.trim()!=='[SILENT]').join('\n').trim();
+function cleanSocialText(raw){
+  let fenced=false,legacy=false;
+  const text=stripSilent(raw).split(/\r?\n/).filter(line=>{
+    if(/^\s*```/.test(line)){fenced=!fenced;return true;}
+    // Only a bare, line-leading legacy command is discarded. Quotes, code and explanations remain text.
+    const marker=!fenced&&/^\s*\[发群(?::\d{5,15})?\]\s*(.*)$/.exec(line);
+    if(!marker||/^(?:表示|代表|的意思|用于|用来|是(?:一个|一种).*(?:标记|格式|指令))/.test(marker[1]))return true;
+    legacy=true;return false;
+  }).join('\n').trim();
+  return {text,legacy};
+}
+
+const replyKey=text=>String(text||'').normalize('NFKC').replace(/[\p{P}\p{S}\s]/gu,'').toLowerCase();
+export function isStaleReply(text,previous,input=''){
+  if(/重复|复述|原话|照抄|再(?:说|发|讲|念)|上一句|刚才.*(?:说|回答|回复)/.test(input))return false;
+  const current=replyKey(text),old=replyKey(previous);
+  // Short acknowledgements are legitimate. Check just the last delivered reply, not all historical messages.
+  if(current.length>=12&&current===old)return true;
+  const lines=String(text||'').split(/[\n。！？!?]+/).map(replyKey).filter(Boolean);
+  const matches=lines.filter(line=>line.length>=6&&old.includes(line));
+  return matches.length>=2&&matches.reduce((n,line)=>n+line.length,0)>=current.length/2;
+}
+
 export function socialReply(raw,{authorized=false,groups=[]}={}){
   const text=stripSilent(raw);
   if(!text)return {text:'',action:null};
   let data;
-  try{data=JSON.parse(text.replace(/^```(?:json)?\s*\n?([\s\S]*?)\n?```$/,'$1'));}catch{return {text,action:null};}
-  if(!data||Array.isArray(data)||typeof data.reply!=='string')return {text,action:null};
-  const replyText=stripSilent(data.reply);
-  if(!replyText)return {text:'',action:null,blocked:!!data.action};
+  const plain=()=>{const cleaned=cleanSocialText(text);return {text:cleaned.text,action:null,...(cleaned.legacy?{blocked:true,legacy:true}:{})};};
+  try{data=JSON.parse(text.replace(/^```(?:json)?\s*\n?([\s\S]*?)\n?```$/,'$1'));}catch{return plain();}
+  if(!data||Array.isArray(data)||typeof data.reply!=='string')return plain();
+  const cleaned=cleanSocialText(data.reply),replyText=cleaned.text;
+  if(!replyText)return {text:'',action:null,blocked:!!data.action||cleaned.legacy,...(cleaned.legacy?{legacy:true}:{})};
   const a=data.action;
   const group=a?.group?String(a.group):groups.length===1?groups[0]:null;
   const valid=authorized&&a?.type==='send_group'&&groups.includes(group)&&typeof a.text==='string'&&a.text.trim()&&a.text.length<=1000;
-  return {text:replyText,action:valid?{group,text:a.text.trim()}:null,blocked:!!a&&!valid};
+  return {text:replyText,action:valid?{group,text:a.text.trim()}:null,blocked:!!a&&!valid||cleaned.legacy,...(cleaned.legacy?{legacy:true}:{})};
 }
 
 // One runner per conversation. Arrivals during generation remain pending for the next turn.
@@ -59,4 +83,5 @@ export class ConversationQueue {
   cancel(key){const q=this.rooms.get(key);if(!q)return;clearTimeout(q.timer);for(const item of q.pending.splice(0))item.resolve();if(!q.running)this.rooms.delete(key);}
   clear(){for(const key of this.rooms.keys())this.cancel(key);}
   get pending(){return [...this.rooms.values()].reduce((n,q)=>n+q.pending.length,0);}
+  get active(){return [...this.rooms.values()].filter(q=>q.running).length;}
 }

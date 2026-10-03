@@ -6,7 +6,7 @@ import path from 'node:path';
 import {EventEmitter} from 'node:events';
 import {Bridge} from '../src/bridge.mjs';
 import {defaults,validateConfig} from '../src/config.mjs';
-import {ConversationQueue,splitBubbles,relayIntent,socialReply} from '../src/conversation.mjs';
+import {ConversationQueue,splitBubbles,relayIntent,socialReply,isStaleReply} from '../src/conversation.mjs';
 import {SocialState} from '../src/social-state.mjs';
 import {Telemetry} from '../src/telemetry.mjs';
 import {ApiChatClient,chatCompletion} from '../src/chat-api.mjs';
@@ -33,6 +33,14 @@ function fixture(t,{outreach=false}={}){
   bridge.privateMode='chat';t.after(()=>bridge.stop());return {bridge,config,onebot,social,work,apiSocial};
 }
 const event=(text,id,{group=false,mention=true}={})=>({post_type:'message',message_type:group?'group':'private',self_id:999999,user_id:123456,group_id:654321,message_id:id,message:group&&mention?'[CQ:at,qq=999999]'+text:text,sender:{nickname:'测试'}});
+
+test('invalid history budgets and aggregation windows fail explicitly instead of silently changing settings',()=>{
+  for(const [field,value]of [['memoryTurns',0],['contextChars',1999],['mergeDelayMs',5001],['mergeMaxWaitMs',99]]){
+    assert.throws(()=>validateConfig({...defaults,social:{...defaults.social,[field]:value}}),error=>error.field===field);
+  }
+  assert.throws(()=>validateConfig({...defaults,social:{...defaults.social,mergeDelayMs:3000,mergeMaxWaitMs:2000}}),error=>error.field==='mergeMaxWaitMs');
+  assert.equal(validateConfig({...defaults,social:{...defaults.social,mergeDelayMs:0}}).social.mergeDelayMs,0);
+});
 
 test('consecutive messages merge and messages arriving during generation wait without busy replies',async t=>{
   const f=fixture(t),first=deferred(),started=deferred();
@@ -101,8 +109,8 @@ test('explicit sourced preferences persist, manual corrections win and deleted f
 });
 test('older excerpts keep original source and time while group context stays isolated',t=>{
   const s=new SocialState(path.join(temp(t),'social.json'));
-  for(let n=0;n<25;n++)s.incoming('private:123456','内容'+n,{now:now+n,learn:false});
-  assert.equal(s.room('private:123456').recent.length,20);assert.equal(s.room('private:123456').summary[0].text,'内容0');assert.equal(s.room('private:123456').summary[0].at,now);
+  for(let n=0;n<65;n++)s.incoming('private:123456','内容'+n,{now:now+n,learn:false});
+  assert.equal(s.room('private:123456').recent.length,60);assert.equal(s.room('private:123456').summary[0].text,'内容0');assert.equal(s.room('private:123456').summary[0].at,now);
   s.incoming('group:654321','群消息',{now,learn:false});assert.equal(s.context('group:654321',now).includes('内容0'),false);
 });
 test('mood changes gradually, decays back to baseline and survives restart',t=>{
@@ -164,4 +172,145 @@ test('new owner input cancels the remaining proactive bubbles, preserving only t
 test('legacy persona format is superseded at runtime without changing the saved persona',async t=>{
   const f=fixture(t);f.config.persona='在末尾输出[发群]正文';let persona;f.social.thread=async(id,options)=>{persona=options.persona;return 'social-id';};
   await f.bridge.handle(event('聊聊',1));assert.match(persona,/格式已经停用/);assert.match(persona,/结构化转发/);assert.equal(f.config.persona,'在末尾输出[发群]正文');
+});
+
+test('bare legacy commands never become chat or group actions; normal quotations remain visible',()=>{
+  assert.deepEqual(socialReply('接住一句\n[发群] 不该转发\n[发群:654321] 也不该转发'),{text:'接住一句',action:null,blocked:true,legacy:true});
+  assert.deepEqual(socialReply('[发群] 偷偷转发',{authorized:true,groups:['654321']}),{text:'',action:null,blocked:true,legacy:true});
+  for(const text of ['他说“[发群] 晚安”是什么意思','[发群] 表示转发标记','[发群] 是一个旧指令标记','```text\n[发群] 示例\n```'])assert.equal(socialReply(text).text,text);
+  const raw=JSON.stringify({reply:'收到\n[发群] 泄漏',action:{type:'send_group',group:'654321',text:'授权正文'}});
+  assert.deepEqual(socialReply(raw,{authorized:true,groups:['654321']}).action,{group:'654321',text:'授权正文'});
+  assert.equal(socialReply(raw,{authorized:false,groups:['654321']}).action,null);
+});
+
+test('stale reply detection preserves short acknowledgements, intentional repeats and new content',()=>{
+  const old='我这不是闲的嘛\n打瓦能放松心情\n你有啥别的建议不';
+  assert.equal(isStaleReply('我这不是闲的嘛\n打两把放松下\n你有啥别的建议不',old,'换个娱乐'),true);
+  assert.equal(isStaleReply('我这不是闲的嘛\n打两把放松下\n你有啥别的建议不',old,'把刚才的回复再说一遍'),false);
+  assert.equal(isStaleReply('好','好','继续'),false);
+  assert.equal(isStaleReply('哈哈哈哈','哈哈哈哈','真好笑'),false);
+  assert.equal(isStaleReply('我这不是闲的嘛\n今天还是出去逛逛吧',old,'去哪里'),false);
+});
+
+test('screenshot regression rewrites the stale answer once, responding only to the new turn',async t=>{
+  const f=fixture(t),key='private:123456';
+  f.bridge.memory.replied(key,'我这不是闲的嘛\n打瓦能放松心情\n你有啥别的建议不',now-1);
+  f.social.run=async(id,prompt)=>{f.social.runs.push(prompt);return f.social.runs.length===1?'我这不是闲的嘛\n打两把放松下\n你有啥别的建议不\n[发群] 导两管子':'你这娱乐还挺费纸';};
+  await f.bridge.handle(event('导两管子',1));
+  assert.equal(f.social.runs.length,2);assert.match(f.social.runs[1],/当前待回复消息[\s\S]*导两管子/);
+  assert.deepEqual(f.onebot.sent.map(v=>v.text),['你这娱乐还挺费纸']);
+  assert.equal(f.bridge.memory.room(key).recent.at(-1).text,'你这娱乐还挺费纸');
+  assert.equal(f.onebot.sent.some(v=>v.target.type==='group'),false);
+});
+
+test('group rewriting stays bounded and pure legacy responses are retried without forwarding',async t=>{
+  const f=fixture(t),key='group:654321';const old='上一轮讲了这句话\n再补充上一轮的观点';
+  f.bridge.memory.replied(key,old,now-1);f.social.run=async(id,prompt)=>{f.social.runs.push(prompt);return old;};
+  await f.bridge.handle(event('换个话题',1,{group:true}));assert.equal(f.social.runs.length,2);assert.equal(f.onebot.sent.map(v=>v.text).join('\n'),old);
+  f.onebot.sent=[];
+  f.social.runs=[];f.social.run=async(id,prompt)=>{f.social.runs.push(prompt);return f.social.runs.length===1?'[发群] 不该转发':'新话题接住了';};
+  await f.bridge.handle(event('新话题',2));assert.equal(f.social.runs.length,2);
+  assert.deepEqual(f.onebot.sent.map(v=>v.text),['新话题接住了']);assert.equal(f.onebot.sent[0].target.type,'private');
+});
+
+test('model replacement during rewriting suppresses late replies and actions',async t=>{
+  const f=fixture(t),started=deferred(),complete=deferred(),old='上一轮说过这段话\n上一轮问过这个问题';
+  f.bridge.memory.replied('private:123456',old,now-1);let calls=0;
+  f.social.run=async()=>{if(++calls===1)return old;started.resolve();return complete.promise;};
+  const pending=f.bridge.handle(event('帮我把晚安发到群里',1));await started.promise;
+  f.bridge.configure({...f.config,model:'replacement'});
+  complete.resolve(JSON.stringify({reply:'已换个回复',action:{type:'send_group',group:'654321',text:'晚安'}}));
+  await pending;assert.equal(calls,2);assert.equal(f.onebot.sent.length,0);
+});
+
+test('context separates the current turn, cleans only assistant protocol leaks and preserves the saved history',t=>{
+  const s=new SocialState(path.join(temp(t),'context.json')),key='private:123456';
+  s.incoming(key,'他说 [发群] 是什么',{now});s.replied(key,'上轮已发出的回答\n[发群] 不该放进上下文',now);
+  s.incoming(key,'当前的新消息',{now:now+1});const before=fs.readFileSync(s.file,'utf8');
+  const context=s.context(key,now+1,'当前的新消息');
+  const history=JSON.parse(context.split('\n')[1]).recent;
+  assert.equal(history.some(v=>v.text==='当前的新消息'),false);
+  assert.equal(history.find(v=>v.role==='assistant').text,'上轮已发出的回答');
+  assert.equal(history.find(v=>v.role==='user').text,'他说 [发群] 是什么');
+  assert.match(context,/不是待续写/);assert.match(context,/不凑满气泡数/);assert.equal(fs.readFileSync(s.file,'utf8'),before);
+});
+
+test('API rewrite history contains the received input once and only the delivered assistant reply',async t=>{
+  const f=fixture(t),old='这就是上一轮的回答\n别把上一轮的回答再发了';let calls=0;
+  const api=new ApiChatClient({baseUrl:'http://localhost/v1',model:'test',apiKey:''},{historyFile:path.join(temp(t),'api.json'),fetchImpl:async()=>new Response(JSON.stringify({choices:[{message:{content:++calls===1?old:'新消息的回答'}}]}))});
+  f.bridge.apiSocial=api;f.bridge.config={...f.config,chat:{...f.config.chat,provider:'openai'}};t.after(()=>api.stop());
+  f.bridge.memory.replied('private:123456',old,now-1);await f.bridge.handle(event('接住当前的话题',1));
+  assert.equal(calls,2);const rows=Object.values(api.history).flat();
+  assert.deepEqual(rows.map(v=>v.content),['接住当前的话题','新消息的回答']);
+  assert.deepEqual(f.onebot.sent.map(v=>v.text),['新消息的回答']);
+});
+
+test('group regeneration consumes the hourly call budget and cannot exceed it',async t=>{
+  const f=fixture(t);f.config.social.maxRepliesPerHour=1;const old='这段话之前已经回复过了\n这个问题上一轮也问过了';
+  f.bridge.memory.replied('group:654321',old,now-1);
+  f.social.run=async(id,prompt)=>{f.social.runs.push(prompt);return old;};
+  await f.bridge.handle(event('换个话题',1,{group:true}));assert.equal(f.social.runs.length,1);assert.equal(f.onebot.sent.map(v=>v.text).join('\n'),old);
+  f.config.social.maxRepliesPerHour=3;
+  await f.bridge.handle(event('接着新话题聊',2,{group:true}));assert.equal(f.social.runs.length,3);
+  await f.bridge.handle(event('第三个话题',3,{group:true}));assert.equal(f.social.runs.length,3);
+});
+
+test('similar rewritten private replies are delivered instead of leaving the owner waiting',async t=>{
+  const f=fixture(t),old='现在这句确实和上一轮很相似\n但不能一直没有回复';let calls=0;
+  f.bridge.memory.replied('private:123456',old,now-1);f.social.run=async()=>{calls++;return old+'\n[发群] 不准漏出';};
+  await f.bridge.handle(event('接着聊天',1));assert.equal(calls,2);
+  assert.equal(f.onebot.sent.map(v=>v.text).join('\n'),old);
+  assert.equal(f.bridge.outreach.value.history.at(-1).content,old);
+});
+
+test('empty filtered direct replies report a recoverable problem while delivery failures are not logged as replied',async t=>{
+  const f=fixture(t),logs=[];f.bridge.log=message=>logs.push(message);f.social.run=async()=> '[发群] 不准漏出';
+  await f.bridge.handle(event('聊天',1));assert.ok(f.onebot.sent.length>0);assert.match(f.onebot.sent.map(v=>v.text).join(''),/没生成有效回复/);
+  f.onebot.sent=[];logs.length=0;f.social.run=async()=> '普通回复';f.onebot.send=async()=>{throw new Error('offline');};
+  await f.bridge.handle(event('再聊',2));assert.equal(f.onebot.sent.length,0);
+  assert.ok(logs.includes('私聊回复未发送'));assert.equal(logs.includes('私聊聊天已回复'),false);
+});
+
+test('fifteen completed turns stay available while bounded context retrieves a relevant older fact',t=>{
+  const s=new SocialState(path.join(temp(t),'budget.json')),key='private:123456';s.configure({memoryTurns:15,contextChars:2000});
+  s.edit(key,{text:'我的宠物是一只白猫'},now);for(let n=0;n<20;n++){s.incoming(key,'用户消息'+n+'内容'.repeat(400),{now:now+n,learn:false});s.replied(key,'回复'+n+'解释'.repeat(400),now+n);}
+  assert.equal(s.room(key).recent.filter(v=>v.role==='assistant').length,15);
+  assert.ok(s.room(key).summary.length>0);
+  const payload=JSON.parse(s.context(key,now+30,'白猫怎么样').split('\n')[1]);assert.ok(JSON.stringify(payload).length<=2000);
+  assert.ok(payload.memories.some(v=>v.text==='我的宠物是一只白猫'));assert.ok(payload.recent.at(-1).text.startsWith('回复19'));
+  assert.equal(s.view(key,now).contextUsage.budget,2000);
+  const restored=new SocialState(s.file);assert.ok(restored.room(key).memories.some(v=>v.text==='我的宠物是一只白猫'));
+});
+
+test('multimodal arrivals enter the queue before slow enrichment and keep original message order',async t=>{
+  const f=fixture(t),prepared=deferred(),release=deferred();
+  f.bridge.modalityContext=async()=>{prepared.resolve();await release.promise;return '图片内容：白猫';};
+  const image={...event('',1),message:[{type:'image',data:{url:'https://example.test/cat.png'}}]};
+  const a=f.bridge.handle(image);await prepared.promise;const b=f.bridge.handle(event('这只猫怎么样',2));
+  assert.equal(f.bridge.status().activeMessageBatches,1);assert.equal(f.social.runs.length,0);release.resolve();await Promise.all([a,b]);
+  assert.equal(f.social.runs.length,2);assert.match(f.social.runs[0],/图片内容：白猫/);assert.match(f.social.runs[1],/这只猫怎么样/);
+  const users=f.bridge.memory.room('private:123456').recent.filter(v=>v.role==='user').map(v=>v.text);assert.match(users[0],/图片内容：白猫/);assert.equal(users[1],'这只猫怎么样');
+});
+
+test('continuous mixed messages produce one chat turn and aggregation counters without losing media',async t=>{
+  const f=fixture(t);f.bridge.modalityContext=async msg=>msg.voice?'语音转写：一起出去吧':'图片内容：猫';
+  const image={...event('',1),message:[{type:'image',data:{url:'https://example.test/cat.png'}}]},voice={...event('',2),message:[{type:'record',data:{file:'gateway-id'}}]};
+  await Promise.all([f.bridge.handle(image),f.bridge.handle(voice),f.bridge.handle(event('你觉得怎么样',3))]);
+  assert.equal(f.social.runs.length,1);assert.match(f.social.runs[0],/图片内容：猫[\s\S]*语音转写：一起出去吧[\s\S]*你觉得怎么样/);
+  const today=f.bridge.telemetry.view(now).today;assert.equal(today.receivedMessages,3);assert.equal(today.batches,1);assert.equal(today.mergedRequests,2);
+});
+
+test('voice media resolves through local OneBot and never invokes ASR while disabled or unmentioned in a group',async t=>{
+  const f=fixture(t);let calls=0;f.onebot.call=async()=>{calls++;throw new Error('not supported');};
+  const note=await f.bridge.modalityContext({voice:true,records:['gateway-id'],type:'private'});assert.match(note,/未启用/);assert.equal(calls,0);
+  f.bridge.config={...f.config,voice:{enabled:true,model:'mock-asr',baseUrl:'http://localhost/v1',apiKey:''}};
+  await f.bridge.modalityContext({voice:true,records:['gateway-id'],type:'group',mentioned:false});assert.equal(calls,0);
+  const failed=await f.bridge.modalityContext({voice:true,records:['gateway-id'],type:'private'});assert.equal(calls,1);assert.match(failed,/不能猜测内容/);
+});
+
+test('aggregation and memory settings hot reload without reconnecting QQ or replacing conversation history',t=>{
+  const f=fixture(t);f.bridge.configure(f.config);const connects=f.onebot.connects,closes=f.onebot.closes;
+  f.bridge.configure({...f.config,social:{...f.config.social,memoryTurns:8,contextChars:3000,mergeDelayMs:1200,mergeMaxWaitMs:3500}});
+  assert.equal(f.bridge.memory.memoryTurns,8);assert.equal(f.bridge.memory.contextChars,3000);assert.equal(f.bridge.queue.delay,10);assert.equal(f.bridge.queue.maxWait,3500);
+  assert.equal(f.onebot.connects,connects);assert.equal(f.onebot.closes,closes);
 });

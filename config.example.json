@@ -13,6 +13,13 @@
     "apiKey": "",
     "model": ""
   },
+  "voice": {
+    "mode": "transcribe",
+    "enabled": false,
+    "baseUrl": "https://api.openai.com/v1",
+    "model": "",
+    "apiKey": ""
+  },
   "outreach": {
     "enabled": false,
     "startHour": 10,
@@ -28,7 +35,11 @@
     "probability": 0.08,
     "cooldownSeconds": 180,
     "maxRepliesPerHour": 8,
-    "contextMessages": 20
+    "contextMessages": 20,
+    "memoryTurns": 15,
+    "contextChars": 6000,
+    "mergeDelayMs": 700,
+    "mergeMaxWaitMs": 2000
   },
   "projects": {},
   "consolePort": 3100,

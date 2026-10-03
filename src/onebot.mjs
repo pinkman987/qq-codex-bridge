@@ -16,12 +16,13 @@ export function parseMessage(event) {
   const faces = segments.filter(s=>s.type==='face').map(s=>String(s.data?.id??'')).filter(Boolean);
   const images = segments.filter(s=>s.type==='image').map(s=>s.data?.url||s.data?.file||'').filter(Boolean);
   const voice = segments.some(s=>s.type==='record'||s.type==='voice');
+  const records=segments.filter(s=>s.type==='record'||s.type==='voice').map(s=>s.data?.file||'').filter(v=>typeof v==='string'&&v.length<=4096&&v);
   const mentioned = segments.some(s=>s.type==='at' && String(s.data?.qq)===String(event.self_id)) ||
     (typeof event.message==='string' && new RegExp(`\\[CQ:at,qq=${String(event.self_id).replace(/[^0-9]/g,'')}\\]`).test(event.message));
   const multimodal = faces.length>0||images.length>0||voice;
   if ((!text && !multimodal) || String(event.user_id)===String(event.self_id)) return null;
   return { type:event.message_type, user:String(event.user_id), group:String(event.group_id??''), id:String(event.message_id??''),
-    name:String(event.sender?.card || event.sender?.nickname || event.user_id).slice(0,60).replace(/[\r\n]/g,' '), text:text.slice(0,12000), mentioned, faces, images, voice };
+    name:String(event.sender?.card || event.sender?.nickname || event.user_id).slice(0,60).replace(/[\r\n]/g,' '), text:text.slice(0,12000), mentioned, faces, images, voice,records };
 }
 export class OneBot extends EventEmitter {
   constructor(log) { super(); this.log=log; this.pending=new Map(); this.seq=0; this.generation=0; this.connected=false; }
@@ -30,7 +31,8 @@ export class OneBot extends EventEmitter {
     const attempt=()=>{
       if(generation!==this.generation) return;
       const headers = config.accessToken ? { Authorization:`Bearer ${config.accessToken}` } : {};
-      const ws = this.socket = new WebSocket(config.wsUrl,{headers,handshakeTimeout:10000,maxPayload:1024*1024});
+      // Converted audio is returned inline as Base64 (up to 20 MiB before encoding).
+      const ws = this.socket = new WebSocket(config.wsUrl,{headers,handshakeTimeout:10000,maxPayload:32*1024*1024});
       const current=()=>generation===this.generation&&this.socket===ws;
       ws.on('open',()=>{
         if(!current())return;

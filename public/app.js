@@ -21,14 +21,19 @@ document.querySelectorAll('[data-jump]').forEach(button=>button.addEventListener
 document.querySelector('.brand').addEventListener('click',event=>{event.preventDefault();selectView('styleSettings');});
 document.querySelector('.skip-link').addEventListener('click',event=>{event.preventDefault();$('form').setAttribute('tabindex','-1');$('form').focus();$('form').scrollIntoView({block:'start'});});
 // Summaries stay natively clickable; selecting a view auto-opens its panel.
-const fields=['snowlumaDbPath','owner','groups','ws','onebotToken','model','projects','basePersona','persona','proactive','probability','cooldown','hourly','enabled','chatProvider','apiBase','apiModel','apiKey','clearApiKey','outreachEnabled','outreachStart','outreachEnd','outreachIdle','outreachCheck','outreachMax'];
-const toggles=new Set(['proactive','enabled','clearApiKey','outreachEnabled']);
+const fields=['snowlumaDbPath','owner','groups','ws','onebotToken','model','projects','basePersona','persona','proactive','probability','cooldown','hourly','enabled','chatProvider','apiBase','apiModel','apiKey','clearApiKey','outreachEnabled','outreachStart','outreachEnd','outreachIdle','outreachCheck','outreachMax','voiceMode','voiceEnabled','voiceBase','voiceModel','voiceKey','clearVoiceKey','memoryTurns','contextChars','mergeDelayMs','mergeMaxWaitMs'];
+const toggles=new Set(['proactive','enabled','clearApiKey','outreachEnabled','voiceEnabled','clearVoiceKey']);
 const token=location.hash.slice(1);
 let current,revision,hasToken=false,savedDraft,dirty=false,saving=false,backendReady=false,lastStatus,lastSavedAt,refreshing=false,noticeKind='',saveFeedback=false;
-let hasApiKey=false,testing=false,backendUnlimitedRecords=false,baseDefault=null;
+let hasApiKey=false,hasVoiceKey=false,testing=false,backendUnlimitedRecords=false,backendCompanion=false,backendNativeOmni=false,baseDefault=null;
 const readDraft=()=>Object.fromEntries(fields.map(id=>[id,toggles.has(id)?$(id).checked:$(id).value]));
 function fillDraft(draft){for(const id of fields){if(toggles.has(id))$(id).checked=draft[id];else $(id).value=draft[id];}updateCounter();updateProvider();}
-function updateProvider(){$('apiFields').hidden=$('chatProvider').value!=='openai';}
+function updateProvider(){
+  $('apiFields').hidden=$('chatProvider').value!=='openai';
+  const omni=$('voiceMode').value==='omni';$('omniHint').hidden=!omni;$('testOmni').hidden=!omni;
+  $('voiceProtocolHint').textContent=omni?'使用 /chat/completions 原生音频，模型填写 qwen3.8-omni-flash；不支持 realtime。':'语音转写需支持 /audio/transcriptions。';
+  $('voiceLimits').textContent=omni?'开启后文字、图片及允许处理的语音会发给所填 Omni 服务。音频仅本轮上传；单文件最多7 MB，整轮媒体大小另有上限，模型请求最多120秒。需要 OneBot 导出 WAV/MP3；未@的群媒体不上传。费用由下方密钥所属账户承担。':'需要 OneBot 支持 get_record 及 WAV/MP3 转换。语音转写：单文件最多20 MiB、识别请求最多30秒。费用由下方密钥所属账户承担。';
+}
 function updateCounter(){$('personaCount').textContent=`${$('persona').value.length} / 6000`;}
 function notify(message,kind='info'){$('notice').textContent=message;$('notice').className=`notice ${kind}`;$('notice').hidden=!message;noticeKind=kind;if(kind=='error')showModal('出错了',message,{kind:'error'});else if(kind=='warning')showModal('请注意',message,{kind:'warning'});}
 let modalResolver=null,modalReturnFocus=null;
@@ -65,13 +70,14 @@ function renderStatus(data){
   lastStatus=data.status;const s=lastStatus;
   $('badge').textContent=s.qqConnected?'QQ 已连接':s.enabled?'QQ 尚未连接':'桥接已暂停';
   $('badge').className=`badge ${s.qqConnected?'online':'offline'}`;
-  $('selfId').textContent=s.selfId||(s.qqConnected?'正在识别账号':'等待登录');$('socialState').textContent=s.chatProvider==='openai'?s.chatModel:(s.socialReady?'Codex 已就绪':'Codex · 收到消息时启动');
+  $('selfId').textContent=s.selfId||(s.qqConnected?'正在识别账号':'等待登录');$('socialState').textContent=s.chatProvider==='omni'?`Omni · ${s.chatModel}`:s.chatProvider==='openai'?s.chatModel:(s.socialReady?'Codex 已就绪':'Codex · 收到消息时启动');
   $('privateState').textContent=s.privateMode==='work'?'工作':'聊天';$('activeState').textContent=String(s.activeTasks);
   const metrics=s.metrics,today=metrics?.today;
   if(today){
     $('metricCalls').textContent=String(today.calls);$('metricLatency').textContent=today.calls?`${(today.averageMs/1000).toFixed(1)} 秒`:'—';
     $('metricTokens').textContent=today.calls===today.unknownUsage?(today.calls?'未知':'—'):`${today.inputTokens.toLocaleString()} / ${today.outputTokens.toLocaleString()}${today.unknownUsage?'（已知部分）':''}`;$('metricQueue').textContent=String(s.queuedMessages||0);
     $('metricDetail').textContent=`失败 ${today.failures} 次；用量未知 ${today.unknownUsage} 次。`+Object.entries(today.kinds).map(([k,n])=>` ${kindLabel(k)} ${n} 次`).join('，');
+    $('metricAggregation').textContent=`今日 ${today.receivedMessages||0} 条消息聚合为 ${today.batches||0} 批，合并减少 ${today.mergedRequests||0} 次逐条聊天请求。此统计不包含重写、图片和语音预处理，不能直接换算为 token 节省比例。`;
     textRows('metricRecent',metrics.recent.slice().reverse().map(v=>`${clock(v.at)} · ${kindLabel(v.kind)} · ${v.model} · ${(v.durationMs/1000).toFixed(1)} 秒 · ${v.ok?'完成':'失败'} · ${v.usage?`${v.usage.input}/${v.usage.output} token`:'用量未知'}`));
     textRows('metricDecisions',metrics.decisions.slice().reverse().map(v=>`${clock(v.at)} · ${v.reason}`));
   }
@@ -91,11 +97,15 @@ function renderToken(){
   $('onebotToken').placeholder=hasToken?'已保存，留空保留原令牌':'填写 SnowLuma 中的 accessToken';
   $('apiKeyState').textContent=hasApiKey?'API Key 已保存':'尚未保存 API Key';
   $('apiKey').placeholder=hasApiKey?'已保存，留空保留原值':'填写该服务的 API Key；本机模型可留空';
+  $('voiceKey').placeholder=hasVoiceKey?'已保存，留空保留原值':'填写 Omni / 语音服务的 API Key';
+  $('voiceKeyState').textContent=hasVoiceKey?'语音密钥已保存':'尚未保存语音密钥';
 }
 function acceptState(data,{replaceDraft=false}={}){
   const firstLoad=!savedDraft;
   const changed=revision&&revision!==data.revision;
-  current=data.config;hasToken=data.hasOnebotToken;baseDefault=data.baseDefault??baseDefault;hasApiKey=!!data.hasApiKey;lastSavedAt=data.savedAt;backendReady=true;backendUnlimitedRecords=data.capabilities?.unlimitedDistillRecords===true;
+  current=data.config;hasToken=data.hasOnebotToken;baseDefault=data.baseDefault??baseDefault;hasApiKey=!!data.hasApiKey;hasVoiceKey=!!data.hasVoiceKey;lastSavedAt=data.savedAt;backendReady=true;backendUnlimitedRecords=data.capabilities?.unlimitedDistillRecords===true;backendCompanion=data.capabilities?.companionOptimizations===true;
+  backendNativeOmni=data.capabilities?.nativeOmni===true;
+  $('companionUpgrade').hidden=backendCompanion&&backendNativeOmni;
   const scope=$('memoryScope'),scopes=[`private:${current.ownerQQ}`,...current.groups.map(g=>`group:${g}`)];
   if(JSON.stringify([...scope.options].map(v=>v.value))!==JSON.stringify(scopes)){const old=scope.value;scope.replaceChildren(...scopes.map(v=>new Option(v.startsWith('private:')?'你的私聊':`群 ${v.slice(6)}`,v)));if(scopes.includes(old))scope.value=old;}
   if(!savedDraft||replaceDraft||(!dirty&&!saving&&changed)){
@@ -114,12 +124,14 @@ async function refresh(){
 async function save(){
   if(saving)return;clearErrors();if(!current||!backendReady){notify('请先连接后台，再保存设置。','error');return;}
   const draft=readDraft();let config;
-  try{config=buildConfig(draft,current,hasToken,hasApiKey);}catch(error){saveFeedback=false;notify(`还没有保存：${error.message}`,'error');fieldError(error.field,error.message);return;}
+  if(draft.voiceMode==='omni'&&!backendNativeOmni){notify('后台尚未加载 Omni 更新，请重启机器人桥接后再保存。输入仍然保留。','warning');return;}
+  if(!backendCompanion){notify('后台尚未载入记忆和语音更新，请重启机器人桥接后再保存。你的输入仍然保留。','warning');return;}
+  try{config=buildConfig(draft,current,hasToken,hasApiKey,hasVoiceKey);}catch(error){saveFeedback=false;notify(`还没有保存：${error.message}`,'error');fieldError(error.field,error.message);return;}
   saving=true;saveFeedback=false;updateActions();notify('正在保存并核对配置…');
   try{
     const result=await api('/api/config',{method:'POST',headers:{'If-Match':revision},body:JSON.stringify(config)});
     // The POST confirms the write. Readback trouble must not claim the committed save failed.
-    config.onebot.accessToken='';config.chat.apiKey='';current=config;hasToken=result.hasOnebotToken;hasApiKey=!!result.hasApiKey;revision=result.revision;lastSavedAt=result.savedAt;
+    config.onebot.accessToken='';config.chat.apiKey='';config.voice.apiKey='';current=config;hasToken=result.hasOnebotToken;hasApiKey=!!result.hasApiKey;hasVoiceKey=!!result.hasVoiceKey;revision=result.revision;lastSavedAt=result.savedAt;
     savedDraft=configToDraft(config);fillDraft(savedDraft);dirty=false;renderToken();
     try{acceptState(await api('/api/state'),{replaceDraft:true});}catch{backendReady=false;$('retry').hidden=false;}
     saveFeedback=true;renderSaveFeedback();
@@ -135,11 +147,25 @@ ${conn}`,{kind:'success'});}
 for(const id of fields){$(id).addEventListener('input',()=>{dirty=savedDraft?!draftEqual(readDraft(),savedDraft):true;updateCounter();updateProvider();const error=$(id+'Error');if(error)error.hidden=true;$(id).removeAttribute('aria-invalid');if(['chatProvider','apiBase','apiModel','apiKey','clearApiKey'].includes(id))$('testResult').textContent='';saveFeedback=false;if(noticeKind==='success')notify('');updateActions();});}
 $('testChat').addEventListener('click',async()=>{
   if(testing||!current)return;clearErrors();let config;
-  try{config=buildConfig(readDraft(),current,hasToken,hasApiKey);}catch(error){fieldError(error.field,error.message);$('testResult').textContent=error.message;return;}
+  try{config=buildConfig(readDraft(),current,hasToken,hasApiKey,hasVoiceKey);}catch(error){fieldError(error.field,error.message);$('testResult').textContent=error.message;return;}
   testing=true;$('testChat').disabled=true;$('testResult').textContent='正在测试模型连接…';
   try{const result=await api('/api/chat/test',{method:'POST',body:JSON.stringify({chat:config.chat}),timeout:20000});$('testResult').textContent=result.message;}
   catch(error){$('testResult').textContent='连接测试失败：'+error.message;fieldError(error.field,error.message);}
   finally{testing=false;$('testChat').disabled=false;}
+});
+$('omniPreset').addEventListener('click',()=>{
+  $('voiceMode').value='omni';$('voiceModel').value='qwen3.8-omni-flash';
+  dirty=!draftEqual(readDraft(),savedDraft);saveFeedback=false;updateProvider();updateActions();
+  $('omniTestResult').textContent='已选择原生 Omni。请填写百炼业务空间的基础地址和对应 API Key，再开启并保存；预设不自动复制密钥。';
+});
+$('testOmni').addEventListener('click',async()=>{
+  if(testing||!current)return;clearErrors();let config;
+  if(!backendNativeOmni){$('omniTestResult').textContent='请重启机器人桥接以加载 Omni 更新。';return;}
+  try{config=buildConfig({...readDraft(),voiceEnabled:true},current,hasToken,hasApiKey,hasVoiceKey);}catch(error){fieldError(error.field,error.message);$('omniTestResult').textContent=error.message;return;}
+  testing=true;$('testOmni').disabled=true;$('omniTestResult').textContent='正在发送固定测试文字，不发送音频或聊天记录…';
+  try{const result=await api('/api/omni/test',{method:'POST',body:JSON.stringify({voice:config.voice}),timeout:20000});$('omniTestResult').textContent=result.message;}
+  catch(error){$('omniTestResult').textContent='Omni 测试失败：'+error.message;fieldError(error.field,error.message);}
+  finally{testing=false;$('testOmni').disabled=false;}
 });
 const DISTILL_MARKER='【从真实聊天记录蒸馏的风格】';
 const DISTILL_END='【蒸馏块结束】';
@@ -394,7 +420,7 @@ $('discard').addEventListener('click',async()=>{
 });
 $('retry').addEventListener('click',refresh);
 function clock(at){return new Date(at).toLocaleString('zh-CN',{hour12:false});}
-function kindLabel(k){return {chat:'私聊',group:'群聊',outreach:'主动考虑',work:'工作',distill:'蒸馏',test:'连接测试',quality:'模型验证'}[k]||k;}
+function kindLabel(k){return {chat:'私聊',group:'群聊',voice:'语音识别',outreach:'主动考虑',work:'工作',distill:'蒸馏',test:'连接测试',quality:'模型验证'}[k]||k;}
 function textRows(id,rows){$(id).replaceChildren(...(rows.length?rows:['暂无记录']).map(text=>{const row=document.createElement('div');row.textContent=text;return row;}));}
 function renderMemory(data){
   const m=data.mood;$('moodState').textContent=`当前语气：${m.valence<-.15?'沉静':m.valence>.15?'愉快':'平常'}；聊天活跃度：${Math.round(m.energy*100)}%。状态会随对话变化，并逐渐回到平常。`;

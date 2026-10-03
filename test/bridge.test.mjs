@@ -108,6 +108,17 @@ test('console rejects absent, unicode tokens and foreign/malformed origins; hide
   const result=await(await fetch(url+'/api/state',{headers:{Authorization:'Bearer '+'a'.repeat(64)}})).json();
   assert.equal(result.config.onebot.accessToken,'');assert.equal(result.hasOnebotToken,true);
 });
+test('OneBot receives converted inline audio larger than the old 1 MiB frame limit',async t=>{
+  const server=new WebSocketServer({host:'127.0.0.1',port:0});await once(server,'listening');
+  const bot=new OneBot(()=>{});t.after(()=>{bot.close();server.close();});
+  const base64=Buffer.alloc(900000).toString('base64');
+  server.on('connection',socket=>socket.on('message',raw=>{
+    const packet=JSON.parse(raw);socket.send(JSON.stringify({echo:packet.echo,status:'ok',retcode:0,data:packet.action==='get_login_info'?{user_id:999999}:{file:'original.silk',out_format:'wav',base64}}));
+  }));
+  const ready=once(bot,'ready');bot.connect({wsUrl:`ws://127.0.0.1:${server.address().port}`,accessToken:'test'});await ready;
+  const result=await bot.call('get_record',{file:'record',out_format:'wav'});
+  assert.equal(result.base64,base64);assert.equal(bot.connected,true);
+});
 test('an unsuccessful turn is not reported as completion and final phase excludes commentary',async()=>{
   const client=new CodexClient('work',()=>{});client.proc={exitCode:null,stdin:{write(){} }};
   let resolved, rejected;const timer=setTimeout(()=>{},1000);
@@ -191,12 +202,34 @@ test('persona change rotates social threads while work threads survive',async t=
 test('multimodal messages carry faces, images and voice into context notes',async t=>{
   const f=fixture(t);
   const note=await f.bridge.modalityContext({voice:true,faces:['999999'],images:[]});
-  assert.match(note,/语音听不了内容/);assert.match(note,/表情：/);
+  assert.match(note,/语音识别未启用/);assert.match(note,/表情：/);
   const msg=parseMessage({post_type:'message',message_type:'private',user_id:123456,self_id:999999,message_id:77,
     message:[{type:'image',data:{url:'http://x/y.jpg'}},{type:'face',data:{id:'1'}},{type:'record',data:{}}],sender:{nickname:'测试'}});
   assert.equal(msg.text,'');assert.equal(msg.images.length,1);assert.equal(msg.faces.length,1);assert.equal(msg.voice,true);
   const codexNote=await f.bridge.modalityContext({images:['http://x/y.jpg']});
   assert.match(codexNote,/看不了内容/);
+});
+
+test('private voice converts through OneBot, transcribes separately and answers the current input',async t=>{
+  const f=fixture(t,{voice:{enabled:true,baseUrl:'http://127.0.0.1:9999/v1',model:'mock-asr',apiKey:'separate-voice-key'}});
+  const temp=fs.mkdtempSync(path.join(os.tmpdir(),'qq-voice-flow-'));
+  const file=path.join(temp,'record.wav'),audio=Buffer.alloc(44);
+  audio.write('RIFF');audio.writeUInt32LE(36,4);audio.write('WAVE',8);fs.writeFileSync(file,audio);
+  t.after(()=>{fs.unlinkSync(file);fs.rmdirSync(temp);});
+  await f.bridge.handle(event({text:'/mode chat',id:1}));f.onebot.sent.length=0;
+  const conversions=[],uploads=[];
+  f.onebot.call=async(action,params)=>{conversions.push({action,params});return {file};};
+  f.bridge.apiSocial.fetchImpl=async(url,options)=>{
+    uploads.push({url,key:options.headers.Authorization,model:options.body.get('model')});
+    return new Response(JSON.stringify({text:'我家的猫叫小白'}));
+  };
+  f.social.run=async(id,text)=>{f.social.runs.push({id,text});return '小白这名字挺可爱';};
+  await f.bridge.handle({...event({id:2}),message:[{type:'record',data:{file:'gateway-record'}}]});
+  assert.deepEqual(conversions,[{action:'get_record',params:{file:'gateway-record',out_format:'wav'}}]);
+  assert.deepEqual(uploads,[{url:'http://127.0.0.1:9999/v1/audio/transcriptions',key:'Bearer separate-voice-key',model:'mock-asr'}]);
+  assert.equal(f.social.runs.length,1);assert.match(f.social.runs[0].text,/语音转写：我家的猫叫小白/);
+  assert.deepEqual(f.onebot.sent.map(v=>v.text),['小白这名字挺可爱']);
+  assert.ok(f.bridge.memory.room('private:123456').recent.some(v=>v.role==='user'&&v.text.includes('我家的猫叫小白')));
 });
 test('tutor session explains stepwise, keeps follow-ups in tutor thread until exit',async t=>{
   const f=fixture(t);

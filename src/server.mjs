@@ -22,7 +22,7 @@ async function readBody(req,limit,message){
   return Buffer.concat(chunks).toString('utf8');
 }
 export function createConsole(bridge, { token, logs=[],config=bridge.config,onSave=()=>{},
-  testChat=(chat,onUsage)=>chatCompletion(chat,[{role:'user',content:'连接测试。只回复：连接成功。'}],{timeoutMs:15000,onUsage}),
+  testChat=(chat,onUsage)=>chatCompletion(chat,[{role:'user',content:'连接测试。只回复：连接成功。'}],{timeoutMs:15000,onUsage,...(chat.nativeOmni?{stream:true,extraBody:{modalities:['text'],reasoning_effort:'none'}}:{})}),
   persist=next=>atomicWrite(path.join(ROOT,'config.json'),next),
   personasFile=path.join(STATE,'personas.json'),
   distillJobFile=path.join(STATE,'distill-job.json'),
@@ -57,6 +57,10 @@ export function createConsole(bridge, { token, logs=[],config=bridge.config,onSa
     if(input.chat?.apiKey==='__KEEP__'){
       if(new URL(input.chat.baseUrl||current.chat.baseUrl).origin!==new URL(current.chat.baseUrl).origin){const error=new Error('更换模型服务后，请重新填写该服务的 API Key');error.field='apiKey';throw error;}
       input.chat.apiKey=current.chat.apiKey;
+    }
+    if(input.voice?.apiKey==='__KEEP__'){
+      if(!current.voice?.baseUrl||new URL(input.voice.baseUrl||current.voice.baseUrl).origin!==new URL(current.voice.baseUrl).origin){const error=new Error('更换语音识别服务后，请重新填写该服务的 API Key');error.field='voiceKey';throw error;}
+      input.voice.apiKey=current.voice.apiKey;
     }
     return input;
   };
@@ -228,8 +232,8 @@ export function createConsole(bridge, { token, logs=[],config=bridge.config,onSa
     if(suppliedBytes.length!==tokenBytes.length || !timingSafeEqual(suppliedBytes,tokenBytes))return reply(401,{error:'请从启动器或启动日志中的完整地址打开控制页'});
     if(req.method==='GET' && url.pathname==='/api/environment')return reply(200,inspectEnvironment(current));
     if(req.method==='GET' && url.pathname==='/api/state') {
-      const safe=structuredClone(current);safe.onebot.accessToken='';safe.chat.apiKey='';
-      return reply(200,{config:safe,capabilities:{unlimitedDistillRecords:true},hasOnebotToken:!!current.onebot.accessToken,hasApiKey:!!current.chat.apiKey,revision:configRevision(current),savedAt:lastSavedAt,status:bridge.status(),logs:logs.slice(-50),baseDefault:defaults.basePersona});
+      const safe=structuredClone(current);safe.onebot.accessToken='';safe.chat.apiKey='';if(safe.voice)safe.voice.apiKey='';
+      return reply(200,{config:safe,capabilities:{unlimitedDistillRecords:true,companionOptimizations:true,nativeOmni:true},hasOnebotToken:!!current.onebot.accessToken,hasApiKey:!!current.chat.apiKey,hasVoiceKey:!!current.voice?.apiKey,revision:configRevision(current),savedAt:lastSavedAt,status:bridge.status(),logs:logs.slice(-50),baseDefault:defaults.basePersona});
     }
     if(url.pathname==='/api/social'){
       try{
@@ -254,18 +258,20 @@ export function createConsole(bridge, { token, logs=[],config=bridge.config,onSa
         const changed=configRevision(next)!==configRevision(current);
         let applied='设置没有变化';
         if(changed){persist(next);current=next;lastSavedAt=new Date().toISOString();onSave(next);applied=bridge.configure(next);}
-        return reply(200,{ok:true,changed,applied,revision:configRevision(current),savedAt:lastSavedAt,hasOnebotToken:!!current.onebot.accessToken,hasApiKey:!!current.chat.apiKey});
+        return reply(200,{ok:true,changed,applied,revision:configRevision(current),savedAt:lastSavedAt,hasOnebotToken:!!current.onebot.accessToken,hasApiKey:!!current.chat.apiKey,hasVoiceKey:!!current.voice?.apiKey});
       }catch(error){return reply(400,{error:error.message,field:error.field||null});}
     }
-    if(req.method==='POST' && url.pathname==='/api/chat/test'){
+    if(req.method==='POST' && ['/api/chat/test','/api/omni/test'].includes(url.pathname)){
       if(testing)return reply(409,{error:'已有模型连接测试正在运行，请稍候'});
       testing=true;
       try{
         let raw='';for await(const chunk of req){raw+=chunk.toString();if(Buffer.byteLength(raw)>16384)throw new Error('测试配置太大');}
-        const input=resolveChat(JSON.parse(raw));const next=validateConfig({...current,chat:{...input.chat,provider:'openai'}},current);
+        const input=resolveChat(JSON.parse(raw)),omni=url.pathname==='/api/omni/test';
+        const next=validateConfig(omni?{...current,voice:{...current.voice,...input.voice,enabled:true,mode:'omni'}}:{...current,chat:{...input.chat,provider:'openai'}},current);
+        const modelConfig=omni?{...next.voice,nativeOmni:true}:next.chat;
         const start=Date.now();let usage=null,ok=false;
-        try{await testChat(next.chat,value=>{usage=value;});ok=true;}
-        finally{bridge.telemetry?.record({kind:'test',provider:'api',model:next.chat.model,durationMs:Date.now()-start,ok,usage});}
+        try{await testChat(modelConfig,value=>{usage=value;});ok=true;}
+        finally{bridge.telemetry?.record({kind:'test',provider:'api',model:modelConfig.model,durationMs:Date.now()-start,ok,usage});}
         return reply(200,{ok:true,message:'模型连接成功，可以保存并应用。测试仅发送固定测试文字，没有发送聊天记录。'});
       }catch(error){return reply(400,{error:error.message,field:error.field||null});}finally{testing=false;}
     }

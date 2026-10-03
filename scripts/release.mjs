@@ -24,7 +24,7 @@ export function releaseFiles(root=ROOT){
     if(/-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----|\bsk-(?:proj-)?[A-Za-z0-9_-]{30,}\b|\bgh[pousr]_[A-Za-z0-9]{30,}\b/.test(text))throw new Error(`Possible credential in ${file}`);
   }
   const example=JSON.parse(fs.readFileSync(path.join(root,'config.example.json'),'utf8'));
-  if(example.enabled||example.ownerQQ||example.groups.length||example.onebot.accessToken||example.chat.apiKey||Object.keys(example.projects).length||example.snowlumaDbPath)throw new Error('Example config contains private settings');
+  if(example.enabled||example.ownerQQ||example.groups.length||example.onebot.accessToken||example.chat.apiKey||example.voice?.apiKey||Object.keys(example.projects).length||example.snowlumaDbPath)throw new Error('Example config contains private settings');
   return unique;
 }
 const crcTable=Array.from({length:256},(_,n)=>{let c=n;for(let i=0;i<8;i++)c=c&1?0xedb88320^(c>>>1):c>>>1;return c>>>0;});
