@@ -89,7 +89,7 @@ export class CodexClient extends EventEmitter {
     // Raw stderr can contain user text, local paths or credentials: keep only a bounded in-memory tail.
     this.stderr='';this.proc.stderr.on('data',chunk=>{this.stderr=(this.stderr+chunk.toString()).slice(-2000);});
     createInterface({input:proc.stdout}).on('line',line=>{if(this.proc!==proc)return;try{this.receive(JSON.parse(line));}catch(error){this.log(`Codex 事件处理失败：${error.message}`);}});
-    await this.request('initialize',{clientInfo:{name:'qq_codex_bridge',title:'QQ Codex Bridge',version:'0.2.0-beta.1'}});
+    await this.request('initialize',{clientInfo:{name:'qq_codex_bridge',title:'QQ Codex Bridge',version:'0.2.0-beta.2'}});
     this.notify('initialized',{});
     const cfg=await this.request('config/read',{includeLayers:false});
     this.mcpNames=Object.keys(cfg.config?.mcp_servers || {});

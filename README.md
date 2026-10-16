@@ -4,17 +4,17 @@
 
 [![Checks](https://github.com/pinkman987/qq-codex-bridge/actions/workflows/ci.yml/badge.svg)](https://github.com/pinkman987/qq-codex-bridge/actions/workflows/ci.yml)
 
-[使用说明](docs/USAGE.md) · [首次安装](docs/QUICKSTART.md) · [更新记录](CHANGELOG.md) · [下载测试版](https://github.com/pinkman987/qq-codex-bridge/releases)
+[使用说明](docs/USAGE.md) · [首次安装](docs/QUICKSTART.md) · [更新记录](CHANGELOG.md) · [下载 Windows 测试版 ZIP](https://github.com/pinkman987/qq-codex-bridge/releases/download/v0.2.0-beta.2/qq-codex-bridge-0.2.0-beta.2-windows.zip)
 
 本机运行的 QQ AI 机器人工作台。通过 SnowLuma 连接 QQ，选择 Codex 或第三方模型聊天；管理员可以在 QQ 下达项目任务、补充要求、回答问题，并接收工作进度和结果。
 
-**2026-10-16 主分支更新：** 新控制台与可爱机器人标志、深浅主题、首页连接教程、供应商管理、人设库、网页试聊、工作目录选择和任务中心已同步。QQ 回复默认精简、纯文本排版，链接按需提供，账户剩余额度仅在工作成功结束后显示。
+**v0.2.0-beta.2 · 2026-10-16：** 新控制台与可爱机器人标志、深浅主题、首页连接教程、供应商管理、人设库、网页试聊、工作目录选择和任务中心已同步。QQ 回复默认精简、纯文本排版，链接按需提供，账户剩余额度仅在工作成功结束后显示。
 
-**Windows 10/11 本地测试项目，Node.js 22.13+。** 需要自行安装 QQ、SnowLuma 及所选模型服务。本次更新源码和文档，现有 `v0.2.0-beta.1` Release ZIP 保持原内容；使用新功能请更新源码并重启后台。其他电脑与真实账号仍需验收，见 [发布验收](docs/RELEASE.md)。
+**Windows 10/11 本地测试项目，Node.js 22.13+。** 需要自行安装 QQ、SnowLuma 及所选模型服务。本轮改动已打包为 [v0.2.0-beta.2](https://github.com/pinkman987/qq-codex-bridge/releases/tag/v0.2.0-beta.2)，下载上方 ZIP 即可获得新版。更新时先备份 config.json 与 state/，关闭旧后台，再按 [升级步骤](docs/QUICKSTART.md) 操作。其他电脑与真实账号仍需验收，见 [发布验收](docs/RELEASE.md)。
 
 ## 开始使用
 
-下载源码后进入项目目录：
+下载 ZIP 并解压，进入其中的 qq-codex-bridge 目录：
 
 ```powershell
 npm ci

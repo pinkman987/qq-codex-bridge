@@ -1,5 +1,5 @@
 # EchoMate 使用说明
-更新日期：2026-10-16。本文对应 GitHub 主分支源码；现有 v0.2.0-beta.1 Release ZIP 未随本次同步更新。
+更新日期：2026-10-16。本文对应 v0.2.0-beta.2。[下载新版 Windows ZIP](https://github.com/pinkman987/qq-codex-bridge/releases/download/v0.2.0-beta.2/qq-codex-bridge-0.2.0-beta.2-windows.zip)，或查看 [发布说明与校验文件](https://github.com/pinkman987/qq-codex-bridge/releases/tag/v0.2.0-beta.2)。
 
 ## 两个程序配合使用
 

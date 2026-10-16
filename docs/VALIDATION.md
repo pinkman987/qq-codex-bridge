@@ -1,4 +1,18 @@
-# 0.2.0-beta.1 本机验证
+# 版本验证记录
+
+## 0.2.0-beta.2 · 2026-10-16
+
+本机环境：Windows，Node.js 24.19.0。
+
+- 208 项隔离测试通过，0 失败；58 个脚本、界面元素和版本一致性检查通过。
+- 模拟首次启动、默认暂停、鉴权、环境检查、模型测试、OneBot 登录和私聊往返通过；没有调用真实模型或发送 QQ 消息。
+- 新版 ZIP 在全新目录解压后完成 npm ci、脚本检查与模拟冒烟；发布文件清单和 SHA-256 校验通过。
+- 发布包与 Git 索引已复查，不含真实配置、密钥、聊天记录、状态目录或本机备份。
+- 此版本功能提交的 [GitHub CI](https://github.com/pinkman987/qq-codex-bridge/actions/runs/38867446077) 已通过；版本发布提交的构建状态见 [Actions](https://github.com/pinkman987/qq-codex-bridge/actions)。
+
+真实外部电脑的 QQ/Codex 登录、OCR 与完整安装验收仍未完成，因此继续作为 Windows 本地测试版发布。
+
+## 0.2.0-beta.1 本机验证
 
 验证日期：2026-10-01。环境：Windows，Node.js 22.13.0 与 24.19.0。
 

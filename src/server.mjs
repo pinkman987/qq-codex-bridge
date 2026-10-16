@@ -234,7 +234,7 @@ export function createConsole(bridge, { token, logs=[],config=bridge.config,onSa
         'Content-Security-Policy':"default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'"});
       return res.end(fs.readFileSync(path.join(ROOT,'public',file)));
     }
-    if(req.method==='GET' && url.pathname==='/healthz')return reply(200,{ok:true,app:'qq-codex-bridge',version:'0.2.0-beta.1'});
+    if(req.method==='GET' && url.pathname==='/healthz')return reply(200,{ok:true,app:'qq-codex-bridge',version:'0.2.0-beta.2'});
     const supplied=String(req.headers.authorization || '').replace(/^Bearer /,'');
     const suppliedBytes=Buffer.from(supplied),tokenBytes=Buffer.from(token);
     if(suppliedBytes.length!==tokenBytes.length || !timingSafeEqual(suppliedBytes,tokenBytes))return reply(401,{error:'请从启动器或启动日志中的完整地址打开控制页'});
