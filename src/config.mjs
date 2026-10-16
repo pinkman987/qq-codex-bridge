@@ -1,6 +1,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import {supportsChatSearch} from '../public/form-state.js';
+import {applySelectedProvider} from './providers.mjs';
 export const ROOT = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 export const STATE = path.join(ROOT, 'state');
 
@@ -12,7 +14,9 @@ export function validateConfig(input, previous = defaults) {
     onebot: { ...previous.onebot, ...input.onebot }, social: { ...previous.social, ...input.social },
     chat: { ...defaults.chat, ...previous.chat, ...input.chat },
     voice: { ...defaults.voice, ...previous.voice, ...input.voice },
+    search: { ...defaults.search, ...previous.search, ...input.search },
     outreach: { ...defaults.outreach, ...previous.outreach, ...input.outreach } };
+  applySelectedProvider(cfg);
   if (typeof cfg.enabled !== 'boolean') fail('enabled','启用 QQ 桥接必须是开关值');
   cfg.ownerQQ = String(cfg.ownerQQ || '').trim();
   if (cfg.ownerQQ && !/^\d{5,15}$/.test(cfg.ownerQQ)) fail('owner','管理员 QQ 号格式不正确，应为 5–15 位数字');
@@ -53,6 +57,9 @@ export function validateConfig(input, previous = defaults) {
   if(typeof cfg.voice.apiKey!=='string'||cfg.voice.apiKey.length>4096||/[\r\n]/.test(cfg.voice.apiKey))fail('voiceKey','语音 API Key 格式不正确');
   if(cfg.voice.enabled&&!cfg.voice.model)fail('voiceModel','开启语音识别前请填写模型名称');
   if(cfg.voice.enabled&&!localVoice&&!cfg.voice.apiKey)fail('voiceKey','开启语音识别前请填写该服务的 API Key');
+  if(typeof cfg.search.enabled!=='boolean')fail('searchEnabled','联网搜索必须是开关值');
+  if(typeof cfg.search.imageFollowup!=='boolean')fail('imageFollowup','图片追问必须是开关值');
+  if(cfg.search.enabled&&!supportsChatSearch(cfg.chat,cfg.voice))fail('searchEnabled','联网搜索需 Codex、百炼 Kimi K3 Responses 或启用 Omni 原生接口');
   for(const [key,field,min,max]of [['memoryTurns','memoryTurns',1,30],['contextChars','contextChars',2000,20000],['mergeDelayMs','mergeDelayMs',0,5000],['mergeMaxWaitMs','mergeMaxWaitMs',100,10000]]){
     cfg.social[key]??=defaults.social[key];
     if(!Number.isInteger(cfg.social[key])||cfg.social[key]<min||cfg.social[key]>max)fail(field,`${field} 必须为 ${min}–${max} 的整数`);
@@ -61,12 +68,6 @@ export function validateConfig(input, previous = defaults) {
   if (typeof cfg.persona !== 'string' || cfg.persona.length > 6000) fail('persona','人设最多 6000 字符');
   if (typeof cfg.basePersona !== 'string' || cfg.basePersona.length > 6000) fail('basePersona','基础规则必须是 6000 字符内的文本');
   if (typeof cfg.social.proactive !== 'boolean') fail('proactive','插话开关格式不正确');
-  if(typeof cfg.outreach.enabled!=='boolean')fail('outreachEnabled','主动私聊必须是开关值');
-  for(const [key,field,min,max,label]of [['startHour','outreachStart',0,23,'开始时间'],['endHour','outreachEnd',1,24,'结束时间'],['idleMinutes','outreachIdle',30,10080,'安静时长'],['checkMinutes','outreachCheck',15,1440,'考虑间隔'],['maxPerDay','outreachMax',1,10,'每日主动消息上限']]){
-    if(!Number.isInteger(cfg.outreach[key])||cfg.outreach[key]<min||cfg.outreach[key]>max)fail(field,`${label}必须是 ${min}–${max} 之间的整数`);
-  }
-  if(cfg.outreach.startHour>=cfg.outreach.endHour)fail('outreachEnd','结束时间必须晚于开始时间，活动时段不能跨天');
-  if(cfg.outreach.timezone!=='Asia/Shanghai')fail('outreachStart','活动时段使用北京时间');
   const rangeFields={probability:['probability','插话概率必须在 0%–50% 之间'],cooldownSeconds:['cooldown','插话间隔必须在 30–86400 秒之间'],maxRepliesPerHour:['hourly','每群每小时 AI 调用上限必须在 1–100 之间'],contextMessages:['persona','聊天上下文条数必须在 1–50 之间']};
   for (const [key, min, max] of [['probability',0,0.5],['cooldownSeconds',30,86400],['maxRepliesPerHour',1,100],['contextMessages',1,50]]) {
     if (typeof cfg.social[key] !== 'number' || !Number.isFinite(cfg.social[key]) || cfg.social[key] < min || cfg.social[key] > max) fail(...rangeFields[key]);

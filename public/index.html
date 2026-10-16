@@ -1,360 +1,127 @@
 <!doctype html>
-<html lang="zh-CN" data-theme="dark">
+<html lang="zh-CN" data-theme="light">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>QQ AI · 控制台</title>
-  <link rel="stylesheet" href="/vendor/pico.css">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>EchoMate · QQ AI 控制台</title>
+
   <link rel="stylesheet" href="/app.css">
   <script type="module" src="/app.js"></script>
 </head>
 <body>
 <a class="skip-link" href="#form">跳到设置内容</a>
-<main>
-  <nav class="sidebar" aria-label="控制台导航">
-    <a class="brand" href="#" aria-label="QQ AI 控制台首页"><span class="brand-mark"><svg class="icon" aria-hidden="true"
-  xmlns="http://www.w3.org/2000/svg"
-  width="24"
-  height="24"
-  viewBox="0 0 24 24"
-  fill="none"
-  stroke="currentColor"
-  stroke-width="2"
-  stroke-linecap="round"
-  stroke-linejoin="round"
->
-  <path d="M16 18a2 2 0 0 1 2 2a2 2 0 0 1 2 -2a2 2 0 0 1 -2 -2a2 2 0 0 1 -2 2m0 -12a2 2 0 0 1 2 2a2 2 0 0 1 2 -2a2 2 0 0 1 -2 -2a2 2 0 0 1 -2 2m-7 12a6 6 0 0 1 6 -6a6 6 0 0 1 -6 -6a6 6 0 0 1 -6 6a6 6 0 0 1 6 6" />
-</svg></span><span>QQ AI<span class="brand-sub">BOT CONSOLE</span></span></a>
-    <div class="nav-caption">机器人管理</div>
-    <div class="nav-items"><button type="button" class="nav-link active" data-jump="styleSettings"><svg class="icon" aria-hidden="true"
-  xmlns="http://www.w3.org/2000/svg"
-  width="24"
-  height="24"
-  viewBox="0 0 24 24"
-  fill="none"
-  stroke="currentColor"
-  stroke-width="2"
-  stroke-linecap="round"
-  stroke-linejoin="round"
->
-  <path d="M3 20l1.3 -3.9c-2.324 -3.437 -1.426 -7.872 2.1 -10.374c3.526 -2.501 8.59 -2.296 11.845 .48c3.255 2.777 3.695 7.266 1.029 10.501c-2.666 3.235 -7.615 4.215 -11.574 2.293l-4.7 1" />
-</svg><span>聊天风格</span><svg class="icon" aria-hidden="true"
-  xmlns="http://www.w3.org/2000/svg"
-  width="24"
-  height="24"
-  viewBox="0 0 24 24"
-  fill="none"
-  stroke="currentColor"
-  stroke-width="2"
-  stroke-linecap="round"
-  stroke-linejoin="round"
->
-  <path d="M9 6l6 6l-6 6" />
-</svg></button><button type="button" class="nav-link" data-jump="socialMemory"><svg class="icon" aria-hidden="true"
-  xmlns="http://www.w3.org/2000/svg"
-  width="24"
-  height="24"
-  viewBox="0 0 24 24"
-  fill="none"
-  stroke="currentColor"
-  stroke-width="2"
-  stroke-linecap="round"
-  stroke-linejoin="round"
->
-  <path d="M15.5 13a3.5 3.5 0 0 0 -3.5 3.5v1a3.5 3.5 0 0 0 7 0v-1.8" />
-  <path d="M8.5 13a3.5 3.5 0 0 1 3.5 3.5v1a3.5 3.5 0 0 1 -7 0v-1.8" />
-  <path d="M17.5 16a3.5 3.5 0 0 0 0 -7h-.5" />
-  <path d="M19 9.3v-2.8a3.5 3.5 0 0 0 -7 0" />
-  <path d="M6.5 16a3.5 3.5 0 0 1 0 -7h.5" />
-  <path d="M5 9.3v-2.8a3.5 3.5 0 0 1 7 0v10" />
-</svg><span>记忆与话题</span><svg class="icon" aria-hidden="true"
-  xmlns="http://www.w3.org/2000/svg"
-  width="24"
-  height="24"
-  viewBox="0 0 24 24"
-  fill="none"
-  stroke="currentColor"
-  stroke-width="2"
-  stroke-linecap="round"
-  stroke-linejoin="round"
->
-  <path d="M9 6l6 6l-6 6" />
-</svg></button><button type="button" class="nav-link" data-jump="distill"><svg class="icon" aria-hidden="true"
-  xmlns="http://www.w3.org/2000/svg"
-  width="24"
-  height="24"
-  viewBox="0 0 24 24"
-  fill="none"
-  stroke="currentColor"
-  stroke-width="2"
-  stroke-linecap="round"
-  stroke-linejoin="round"
->
-  <path d="M16 18a2 2 0 0 1 2 2a2 2 0 0 1 2 -2a2 2 0 0 1 -2 -2a2 2 0 0 1 -2 2m0 -12a2 2 0 0 1 2 2a2 2 0 0 1 2 -2a2 2 0 0 1 -2 -2a2 2 0 0 1 -2 2m-7 12a6 6 0 0 1 6 -6a6 6 0 0 1 -6 -6a6 6 0 0 1 -6 6a6 6 0 0 1 6 6" />
-</svg><span>记录蒸馏</span><svg class="icon" aria-hidden="true"
-  xmlns="http://www.w3.org/2000/svg"
-  width="24"
-  height="24"
-  viewBox="0 0 24 24"
-  fill="none"
-  stroke="currentColor"
-  stroke-width="2"
-  stroke-linecap="round"
-  stroke-linejoin="round"
->
-  <path d="M9 6l6 6l-6 6" />
-</svg></button><button type="button" class="nav-link" data-jump="chatSettings"><svg class="icon" aria-hidden="true"
-  xmlns="http://www.w3.org/2000/svg"
-  width="24"
-  height="24"
-  viewBox="0 0 24 24"
-  fill="none"
-  stroke="currentColor"
-  stroke-width="2"
-  stroke-linecap="round"
-  stroke-linejoin="round"
->
-  <path d="M5 6a1 1 0 0 1 1 -1h12a1 1 0 0 1 1 1v12a1 1 0 0 1 -1 1h-12a1 1 0 0 1 -1 -1l0 -12" />
-  <path d="M9 9h6v6h-6l0 -6" />
-  <path d="M3 10h2" />
-  <path d="M3 14h2" />
-  <path d="M10 3v2" />
-  <path d="M14 3v2" />
-  <path d="M21 10h-2" />
-  <path d="M21 14h-2" />
-  <path d="M14 21v-2" />
-  <path d="M10 21v-2" />
-</svg><span>聊天模型</span><svg class="icon" aria-hidden="true"
-  xmlns="http://www.w3.org/2000/svg"
-  width="24"
-  height="24"
-  viewBox="0 0 24 24"
-  fill="none"
-  stroke="currentColor"
-  stroke-width="2"
-  stroke-linecap="round"
-  stroke-linejoin="round"
->
-  <path d="M9 6l6 6l-6 6" />
-</svg></button><button type="button" class="nav-link" data-jump="outreachSettings"><svg class="icon" aria-hidden="true"
-  xmlns="http://www.w3.org/2000/svg"
-  width="24"
-  height="24"
-  viewBox="0 0 24 24"
-  fill="none"
-  stroke="currentColor"
-  stroke-width="2"
-  stroke-linecap="round"
-  stroke-linejoin="round"
->
-  <path d="M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0" />
-  <path d="M12 7v5l3 3" />
-</svg><span>主动聊天</span><svg class="icon" aria-hidden="true"
-  xmlns="http://www.w3.org/2000/svg"
-  width="24"
-  height="24"
-  viewBox="0 0 24 24"
-  fill="none"
-  stroke="currentColor"
-  stroke-width="2"
-  stroke-linecap="round"
-  stroke-linejoin="round"
->
-  <path d="M9 6l6 6l-6 6" />
-</svg></button><div class="nav-caption">系统与服务</div><button type="button" class="nav-link" data-jump="connection"><svg class="icon" aria-hidden="true"
-  xmlns="http://www.w3.org/2000/svg"
-  width="24"
-  height="24"
-  viewBox="0 0 24 24"
-  fill="none"
-  stroke="currentColor"
-  stroke-width="2"
-  stroke-linecap="round"
-  stroke-linejoin="round"
->
-  <path d="M9.785 6l8.215 8.215l-2.054 2.054a5.81 5.81 0 1 1 -8.215 -8.215l2.054 -2.054" />
-  <path d="M4 20l3.5 -3.5" />
-  <path d="M15 4l-3.5 3.5" />
-  <path d="M20 9l-3.5 3.5" />
-</svg><span>账号连接</span><svg class="icon" aria-hidden="true"
-  xmlns="http://www.w3.org/2000/svg"
-  width="24"
-  height="24"
-  viewBox="0 0 24 24"
-  fill="none"
-  stroke="currentColor"
-  stroke-width="2"
-  stroke-linecap="round"
-  stroke-linejoin="round"
->
-  <path d="M9 6l6 6l-6 6" />
-</svg></button><button type="button" class="nav-link" data-jump="advanced"><svg class="icon" aria-hidden="true"
-  xmlns="http://www.w3.org/2000/svg"
-  width="24"
-  height="24"
-  viewBox="0 0 24 24"
-  fill="none"
-  stroke="currentColor"
-  stroke-width="2"
-  stroke-linecap="round"
-  stroke-linejoin="round"
->
-  <path d="M5 4h4l3 3h7a2 2 0 0 1 2 2v8a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2v-11a2 2 0 0 1 2 -2" />
-</svg><span>工作空间</span><svg class="icon" aria-hidden="true"
-  xmlns="http://www.w3.org/2000/svg"
-  width="24"
-  height="24"
-  viewBox="0 0 24 24"
-  fill="none"
-  stroke="currentColor"
-  stroke-width="2"
-  stroke-linecap="round"
-  stroke-linejoin="round"
->
-  <path d="M9 6l6 6l-6 6" />
-</svg></button><button type="button" class="nav-link" data-jump="metricsPanel"><svg class="icon" aria-hidden="true"
-  xmlns="http://www.w3.org/2000/svg"
-  width="24"
-  height="24"
-  viewBox="0 0 24 24"
-  fill="none"
-  stroke="currentColor"
-  stroke-width="2"
-  stroke-linecap="round"
-  stroke-linejoin="round"
->
-  <path d="M3 13a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v6a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1l0 -6" />
-  <path d="M15 9a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v10a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1l0 -10" />
-  <path d="M9 5a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v14a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1l0 -14" />
-  <path d="M4 20h14" />
-</svg><span>运行统计</span><svg class="icon" aria-hidden="true"
-  xmlns="http://www.w3.org/2000/svg"
-  width="24"
-  height="24"
-  viewBox="0 0 24 24"
-  fill="none"
-  stroke="currentColor"
-  stroke-width="2"
-  stroke-linecap="round"
-  stroke-linejoin="round"
->
-  <path d="M9 6l6 6l-6 6" />
-</svg></button></div>
-    <div class="sidebar-footer"><span class="local-dot"></span>本地控制台<span class="version">v0.2.0-beta.1</span></div>
-  </nav>
-  <header class="page-header">
-    <div class="breadcrumb">工作台 <span>/</span> <strong id="viewCrumb">聊天风格</strong></div>
-    <div id="badge" class="badge" role="status">正在连接后台…</div>
+<div class="app">
+  <header class="masthead">
+    <div class="masthead-top">
+      <a class="brand" href="#home" aria-label="EchoMate 控制台首页"><svg class="brand-mark" aria-hidden="true" focusable="false" viewBox="0 0 64 64" fill="none"><rect width="64" height="64" rx="20" fill="#DDF4EA"/><path d="M32 23v-7" stroke="#176B60" stroke-width="3" stroke-linecap="round"/><circle cx="32" cy="13" r="4" fill="#F49C86"/><rect x="8" y="31" width="7" height="12" rx="3.5" fill="#62BBA4"/><rect x="49" y="31" width="7" height="12" rx="3.5" fill="#62BBA4"/><rect x="22" y="47" width="8" height="8" rx="4" fill="#176B60"/><rect x="34" y="47" width="8" height="8" rx="4" fill="#176B60"/><rect x="12" y="21" width="40" height="30" rx="13" fill="#176B60"/><rect x="17" y="26" width="30" height="20" rx="9" fill="#FFFCF3"/><circle cx="25" cy="33.5" r="2.3" fill="#174D45"/><circle cx="39" cy="33.5" r="2.3" fill="#174D45"/><ellipse cx="22" cy="39" rx="2.8" ry="1.8" fill="#F4AF9C"/><ellipse cx="42" cy="39" rx="2.8" ry="1.8" fill="#F4AF9C"/><path d="M29 39q3 4 6 0" stroke="#174D45" stroke-width="2" stroke-linecap="round"/></svg>EchoMate<span class="brand-sub">QQ AI 工作台 · v0.2.0-beta.1</span></a>
+      <span id="badge" class="badge" role="status">正在连接后台…</span>
+      <button id="themeToggle" type="button" class="secondary theme-toggle" aria-label="切换到深色模式" title="切换到深色模式">
+        <svg class="theme-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M20 15.5A8.5 8.5 0 0 1 8.5 4a8.5 8.5 0 1 0 11.5 11.5Z"/></svg>
+        <svg class="theme-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5"/></svg><span id="themeLabel">深色模式</span>
+      </button>
+      <div class="masthead-actions save-dock" role="group" aria-label="设置操作">
+        <span class="save-indicator" aria-hidden="true"></span>
+        <div class="save-meta"><strong id="draftState">正在读取配置…</strong><span id="saveHint">连接后台后即可编辑并保存。</span></div>
+        <button id="discard" type="button" class="secondary" disabled>撤销修改</button>
+        <button id="save" type="button" title="也可按 Ctrl+S 保存" aria-keyshortcuts="Control+S Meta+S" disabled>保存并应用</button>
+      </div>
+    </div>
   </header>
-  <div class="page-intro"><div><div class="eyebrow" id="viewEyebrow">PERSONALITY</div><h1 id="viewTitle">让每次聊天，都有自己的风格。</h1><p id="viewDescription">调整人设与聊天节奏，打造你喜欢的群聊伙伴。</p></div><span class="intro-mark"><svg class="icon" aria-hidden="true"
-  xmlns="http://www.w3.org/2000/svg"
-  width="24"
-  height="24"
-  viewBox="0 0 24 24"
-  fill="none"
-  stroke="currentColor"
-  stroke-width="2"
-  stroke-linecap="round"
-  stroke-linejoin="round"
->
-  <path d="M3 20l1.3 -3.9c-2.324 -3.437 -1.426 -7.872 2.1 -10.374c3.526 -2.501 8.59 -2.296 11.845 .48c3.255 2.777 3.695 7.266 1.029 10.501c-2.666 3.235 -7.615 4.215 -11.574 2.293l-4.7 1" />
-</svg></span></div>
-  <section class="overview" aria-label="运行状态">
-    <div><span class="stat-icon violet"><svg class="icon" aria-hidden="true"
-  xmlns="http://www.w3.org/2000/svg"
-  width="24"
-  height="24"
-  viewBox="0 0 24 24"
-  fill="none"
-  stroke="currentColor"
-  stroke-width="2"
-  stroke-linecap="round"
-  stroke-linejoin="round"
->
-  <path d="M9.785 6l8.215 8.215l-2.054 2.054a5.81 5.81 0 1 1 -8.215 -8.215l2.054 -2.054" />
-  <path d="M4 20l3.5 -3.5" />
-  <path d="M15 4l-3.5 3.5" />
-  <path d="M20 9l-3.5 3.5" />
-</svg></span><div><span>机器人 QQ</span><strong id="selfId">—</strong></div></div>
-    <div><span class="stat-icon cyan"><svg class="icon" aria-hidden="true"
-  xmlns="http://www.w3.org/2000/svg"
-  width="24"
-  height="24"
-  viewBox="0 0 24 24"
-  fill="none"
-  stroke="currentColor"
-  stroke-width="2"
-  stroke-linecap="round"
-  stroke-linejoin="round"
->
-  <path d="M5 6a1 1 0 0 1 1 -1h12a1 1 0 0 1 1 1v12a1 1 0 0 1 -1 1h-12a1 1 0 0 1 -1 -1l0 -12" />
-  <path d="M9 9h6v6h-6l0 -6" />
-  <path d="M3 10h2" />
-  <path d="M3 14h2" />
-  <path d="M10 3v2" />
-  <path d="M14 3v2" />
-  <path d="M21 10h-2" />
-  <path d="M21 14h-2" />
-  <path d="M14 21v-2" />
-  <path d="M10 21v-2" />
-</svg></span><div><span>聊天引擎</span><strong id="socialState">等待消息</strong></div></div>
-    <div><span class="stat-icon amber"><svg class="icon" aria-hidden="true"
-  xmlns="http://www.w3.org/2000/svg"
-  width="24"
-  height="24"
-  viewBox="0 0 24 24"
-  fill="none"
-  stroke="currentColor"
-  stroke-width="2"
-  stroke-linecap="round"
-  stroke-linejoin="round"
->
-  <path d="M3 20l1.3 -3.9c-2.324 -3.437 -1.426 -7.872 2.1 -10.374c3.526 -2.501 8.59 -2.296 11.845 .48c3.255 2.777 3.695 7.266 1.029 10.501c-2.666 3.235 -7.615 4.215 -11.574 2.293l-4.7 1" />
-</svg></span><div><span>私聊模式</span><strong id="privateState">—</strong></div></div>
-    <div><span class="stat-icon green"><svg class="icon" aria-hidden="true"
-  xmlns="http://www.w3.org/2000/svg"
-  width="24"
-  height="24"
-  viewBox="0 0 24 24"
-  fill="none"
-  stroke="currentColor"
-  stroke-width="2"
-  stroke-linecap="round"
-  stroke-linejoin="round"
->
-  <path d="M3 12h4l3 8l4 -16l3 8h4" />
-</svg></span><div><span>进行中的任务</span><strong id="activeState">—</strong></div></div>
-  </section>
-  <div id="notice" class="notice" role="status" aria-live="polite" hidden></div>
-  <button id="retry" class="secondary" type="button" hidden>重试连接后台</button>
-  <div class="layout">
+  <div class="workspace">
+    <nav class="topnav" aria-label="控制台导航"><span class="nav-heading">控制台</span>
+      <button type="button" class="nav-link active" data-jump="home"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true"><path d="M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z"/></svg><span>概览</span></button>
+      <button type="button" class="nav-link" data-jump="styleSettings"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true"><path d="M5 4h14v13H9l-4 4V4ZM9 8h6M9 12h4"/></svg><span>聊天风格</span></button>
+      <button type="button" class="nav-link" data-jump="socialMemory"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true"><path d="M4 4h6l2 2 2-2h6v15h-6l-2 2-2-2H4V4ZM12 6v15"/></svg><span>记忆与话题</span></button>
+      <button type="button" class="nav-link" data-jump="distill"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true"><path d="M5 3v18M12 7v14M19 11v10M3 7h4M10 12h4M17 16h4"/></svg><span>学习聊天风格</span></button>
+      <span class="nav-heading">配置与连接</span>
+      <button type="button" class="nav-link" data-jump="chatSettings"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16v14H4V5ZM8 9h8M8 13h5"/></svg><span>聊天模型</span></button>
+      <button type="button" class="nav-link" data-jump="connection"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true"><path d="M8 4H4v6h4V4ZM20 14h-4v6h4v-6ZM8 7h4v10h4"/></svg><span>账号连接</span></button>
+      <button type="button" class="nav-link" data-jump="advanced"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h7l2 3h9v11H3V6Z"/></svg><span>工作空间</span></button>
+      <span class="nav-heading">运行情况</span>
+      <button type="button" class="nav-link" data-jump="taskCenter"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M5 3h14v18H5zM8 8h8M8 12h8M8 16h5"/></svg><span>任务中心</span></button>
+      <button type="button" class="nav-link" data-jump="metricsPanel"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true"><path d="M4 3v18h17M8 16v-5M13 16V7M18 16V4"/></svg><span>运行统计</span></button>
+    </nav>
+  <main>
+    <div class="page-head"><div class="eyebrow" id="viewEyebrow">OVERVIEW</div><h1 id="viewTitle">控制台概览</h1><p id="viewDescription">机器人状态、快捷指令与最近动态。</p></div>
+
+    <div id="notice" class="notice" role="status" aria-live="polite" hidden></div>
+    <button id="retry" class="secondary" type="button" hidden>重试连接后台</button>
+
+    <section id="home" class="view is-active" aria-label="控制台概览">
+      <div class="ledger" aria-label="运行状态">
+        <div data-jump="connection" role="link" tabindex="0"><span class="stat-dot t"></span><span class="stat-label">机器人 QQ</span><strong id="selfId">—</strong></div>
+        <div data-jump="chatSettings" role="link" tabindex="0"><span class="stat-dot g"></span><span class="stat-label">聊天引擎</span><strong id="socialState">等待消息</strong></div>
+        <div data-jump="styleSettings" role="link" tabindex="0"><span class="stat-dot o"></span><span class="stat-label">私聊模式</span><strong id="privateState">—</strong></div>
+        <div data-jump="taskCenter" role="link" tabindex="0"><span class="stat-dot b"></span><span class="stat-label">进行中的任务</span><strong id="activeState">—</strong></div>
+      </div>
+
+      <details id="gettingStarted" class="getting-started" open>
+        <summary><div><span class="overline">新手入门</span><h2>第一次使用？先连接 SnowLuma</h2><p>需要两个程序配合。跟着下面四步，让机器人回复第一条消息。</p></div><span class="expand-cue"></span></summary>
+        <div class="guide-roles"><p><strong>SnowLuma 控制台</strong><span>连接机器人 QQ，负责收消息、发消息。</span></p><p><strong>EchoMate · 当前控制台</strong><span>连接 AI 模型，设置人设，决定怎样回复。</span></p></div>
+        <ol class="guide-steps">
+          <li><span class="step-number" aria-hidden="true">1</span><div><h3>先在 SnowLuma 登录机器人 QQ</h3><p>单独下载并启动 SnowLuma，按它的引导接入 QQ 进程、扫码登录。这里登录的是<strong>机器人账号</strong>；你平时给它发消息的账号，稍后填为管理员。</p><div class="guide-actions"><a href="https://github.com/SnowLuma/SnowLuma/releases/latest" target="_blank" rel="noreferrer">下载 SnowLuma ↗</a><a href="https://github.com/SnowLuma/SnowLuma#快速开始" target="_blank" rel="noreferrer">官方安装说明 ↗</a></div></div></li>
+          <li><span class="step-number" aria-hidden="true">2</span><div><h3>在 SnowLuma 开启消息连接</h3><p>找到 OneBot 连接设置，开启 <strong>OneBot v11 正向 WebSocket（服务端）</strong>。记下连接地址和该连接的 <code>accessToken</code>。</p><small>地址示例：<code>ws://127.0.0.1:3001</code>，以你的实际设置为准。这里需要的令牌不是 SnowLuma 网页的登录密码。</small></div></li>
+          <li><span class="step-number" aria-hidden="true">3</span><div><h3>回到这里，配置模型和账号</h3><p>在「聊天模型」选择可用模型并完成配置；在「账号连接」填写<strong>你的管理员 QQ</strong>、允许使用的群号，以及上一步的地址和令牌。开启「启用 QQ 桥接」，点击「保存并应用」。</p><div class="guide-actions"><button type="button" class="secondary" data-jump="chatSettings">配置聊天模型</button><button type="button" class="secondary" data-jump="connection">填写账号连接</button></div></div></li>
+          <li><span class="step-number" aria-hidden="true">4</span><div><h3>看到「QQ 已连接」，发条消息试试</h3><p>用管理员 QQ 私聊机器人，先发送 <code>/mode chat</code>，再发送「你好」。群聊时，把机器人拉入已配置的群，再 <strong>@机器人</strong> 发消息。</p><small>「设置已保存」不代表 QQ 已连接。只配置聊天接口时，先用聊天模式；需要执行工作任务时，再配置 Codex 并切换工作模式。</small></div></li>
+        </ol>
+        <div class="guide-footer"><p>使用时让电脑、SnowLuma 和机器人程序保持运行；可以关闭控制台网页。</p><details><summary>还没收到回复？检查这三处<span class="expand-cue"></span></summary><ul><li>QQ 未连接：检查 SnowLuma 的账号是否在线、正向 WebSocket 是否开启，以及地址和令牌是否一致。</li><li>QQ 已连接但不回复：检查管理员 QQ、允许接入的群号；私聊先发送 <code>/mode chat</code>，群聊需要 @机器人。</li><li>提示模型错误：在「聊天模型」检查模型配置；使用兼容接口时可点击「测试模型连接」。</li></ul></details></div>
+      </details>
+
+      <div class="home-grid">
+        <section class="panel"><div class="eyebrow">QUICK GUIDE</div><h2>在 QQ 里怎么用</h2><p>群里 @机器人聊天。管理员私聊可切换闲聊或工作模式。</p>
+          <dl class="commands"><dt>/mode chat</dt><dd>切换到闲聊</dd><dt>/mode work</dt><dd>切换到工作</dd><dt>/projects</dt><dd>查看项目</dd><dt>/project 项目名</dt><dd>切换工作目录</dd><dt>/stop</dt><dd>停止当前任务</dd><dt>/reset</dt><dd>开启新会话</dd></dl>
+          <div class="info-box"><span>当前项目</span><strong id="projectState">默认工作目录</strong><small id="workState">工作引擎会在收到任务时启动。</small>
+            <p id="workDirectoryState" class="work-directory-path"></p>
+            <details class="workspace-picker"><summary>选择工作目录<span class="expand-cue"></span></summary>
+              <label for="workProject">已配置的目录</label>
+              <div class="workspace-picker-row"><select id="workProject"><option value="">默认工作目录</option></select><button id="useWorkProject" type="button" class="secondary">切换目录</button></div>
+              <label for="workDirectory">添加工作目录</label>
+              <div class="workspace-picker-row"><input id="workDirectory" autocomplete="off" spellcheck="false" placeholder="文件夹绝对路径，例如 D:\我的项目"><button id="chooseWorkDirectory" type="button" class="secondary">选择文件夹</button></div>
+              <button id="applyWorkDirectory" type="button" class="secondary">使用此目录</button>
+              <small>选择本机已有文件夹，应用后供管理员工作任务使用，闲聊模式保持不变。</small>
+            </details>
+            <p id="workspaceResult" role="status" aria-live="polite" hidden></p>
+          </div>
+        </section>
+        <section class="panel activity-panel"><div class="eyebrow">LIVE ACTIVITY</div><h2>最近动态</h2><p id="latestLog">正在读取运行记录…</p><div id="logs" class="logs" aria-label="运行日志"></div></section>
+      </div>
+      <p class="local-note">控制页只在本机运行。<a href="https://github.com/SnowLuma/SnowLuma/releases/latest" target="_blank" rel="noreferrer">SnowLuma 下载</a></p>
+    </section>
+
     <form id="form" novalidate>
       <section id="styleSettings" class="panel">
-        <div class="section-heading"><div><div class="eyebrow">01 / 聊天</div><h2>群聊人设</h2><p class="section-description">一句话的语气，也可以很有个性。</p></div><span class="tag">管理员私聊可切换到聊天</span></div>
-        <details class="base-persona"><summary>内置基础规则（永远生效，拼在人设前面；可改成自己的一套）<span class="expand-cue"></span></summary><textarea id="basePersona" rows="10" maxlength="6000" aria-describedby="basePersonaHint basePersonaError"></textarea>
-        <div class="field-footer"><span id="basePersonaHint">这套规则永远拼在人设差异内容前面生效；每个人/每台机器可以改成自己的一套。修改后点「保存并应用」。</span></div>
+        <div id="personaLibrary">
+          <div class="section-heading"><div><h2>人设预设与管理</h2><p class="section-description">选择一个人设开始编辑，或写下你自己的设定。</p></div><button id="personaNew" type="button">新建人设</button></div>
+          <div class="current-persona"><div class="persona-symbol" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M5 4h14v13H9l-4 4V4Z"/><path d="M9 8h6M9 12h4"/></svg></div><div class="current-persona-copy"><span class="overline" id="personaCurrentState">当前人设</span><h3>正在使用的个性设定</h3><p id="personaSummary">正在读取…</p></div><button id="personaEditCurrent" type="button" class="secondary">编辑当前人设</button></div>
+          <div class="library-heading"><h3>已保存的预设 <span id="presetCount" class="tag">0</span></h3><button id="presetReload" class="text-button" type="button">刷新列表</button></div>
+          <div id="presetList" class="preset-list"></div>
+          <p id="presetEmpty" class="preset-empty" role="status">正在读取预设…</p>
+          <p class="library-help">载入后可修改内容；点击页面「保存并应用」才会更新机器人。</p>
+        </div>
+        <section id="personaEditor" class="persona-editor" aria-labelledby="personaEditorTitle" hidden>
+          <div class="section-heading"><div><span class="overline">人设编辑</span><h2 id="personaEditorTitle">编辑个性设定</h2><p class="section-description">写下它的语气、性格、背景，以及你希望的交流方式。</p></div></div>
+          <label for="persona">个性设定</label>
+          <textarea id="persona" rows="10" maxlength="6000" placeholder="例如：说话直接但有耐心，习惯用简短的句子；记得我们是老朋友，不必每次都客套。" aria-describedby="personaHint personaError"></textarea>
+          <div class="field-footer"><span id="personaHint">完成编辑会保留为草稿，保存并应用后生效。</span><span id="personaCount">0 / 6000</span></div>
+          <p class="field-error" id="personaError" hidden></p>
+          <div class="editor-actions"><button id="personaDone" type="button">完成编辑</button><button id="personaCancel" type="button" class="secondary">取消本次编辑</button></div>
+          <div class="preset-save"><label for="personaPresetName">另外存为预设</label><div class="preset-row"><input id="personaPresetName" autocomplete="off" maxlength="80" placeholder="预设名称，例如：轻松群聊"><button id="personaPresetSave" type="button" class="secondary">保存到预设库</button></div><small>存入预设库方便下次载入，不会立即更换机器人当前的人设。</small><p id="personaEditorStatus" class="test-result" role="status" aria-live="polite"></p></div>
+        </section>
+        <section class="playground" aria-labelledby="playTitle">
+          <div class="section-heading"><div><span class="overline">先试聊，再应用</span><h2 id="playTitle">聊天测试窗口</h2><p>直接试试语气和回复效果，无需切换到 QQ。</p></div><button type="button" id="playClear" class="secondary">清空对话</button></div>
+          <div class="fields two"><div class="field"><label for="playMode">使用哪套设置</label><select id="playMode"><option value="saved">已应用设置 · QQ 正在使用</option><option value="draft">页面草稿 · 尚未应用</option></select></div><div class="field"><label class="check-row" for="playMemory"><input type="checkbox" id="playMemory">带上管理员私聊记忆</label><small>包含已保留的记忆和最近上下文，只读取，不新增记忆。</small></div></div>
+          <p class="local-note">测试会调用所选模型并产生正常用量；消息只留在当前页面，不发送到 QQ。更换测试设置后会开始新对话。</p>
+          <label for="playInput">测试消息</label><textarea id="playInput" rows="3" maxlength="4000" placeholder="试着聊一句，或问问它记得什么。Ctrl + Enter 发送。"></textarea>
+          <div class="editor-actions"><button id="playSend" type="button">发送测试消息</button><button id="playStop" type="button" class="secondary" hidden>停止生成</button><span id="playStatus" role="status" aria-live="polite"></span></div>
+          <h3 class="play-results-heading">测试结果</h3>
+          <div id="playMessages" class="play-messages" role="log" aria-label="测试对话" aria-live="polite"><p class="empty-state">从上面发送一句「你好」，回复会显示在这里。</p></div>
+        </section>
+        <div class="behavior-heading"><h2>聊天行为</h2><p>调整回复节奏和群聊参与方式。</p></div>
+        <details class="base-persona"><summary>基础行为规则<span class="expand-cue"></span></summary><textarea id="basePersona" rows="10" maxlength="6000" aria-describedby="basePersonaHint basePersonaError"></textarea>
+        <div class="field-footer"><span id="basePersonaHint">通用规则与所选个性设定一起生效，修改后保存即可。</span></div>
         <div class="preset-row"><button type="button" id="basePersonaReset" class="secondary">恢复默认 15 条</button></div>
         <p class="field-error" id="basePersonaError" hidden></p></details>
-        <label for="persona">群聊人设（差异内容：蒸馏风格、背景、附加设定写这里）</label>
-        <textarea id="persona" rows="10" maxlength="6000" placeholder="只写差异部分：蒸馏并入的风格块、背景补充、额外设定…基础 15 条规则已内置，无需重复。" aria-describedby="personaHint personaError"></textarea>
-        <div class="field-footer"><span id="personaHint">决定聊天时的语气和表达方式。</span><span id="personaCount">0 / 6000</span></div>
-        <p class="field-error" id="personaError" hidden></p>
-        <details class="preset-tools" open><summary>人设预设与管理<span class="expand-cue"></span></summary><div class="tool-body">
-        <div class="field"><label for="personaPresetName">把当前人设存成新预设</label>
-          <div class="preset-row"><input id="personaPresetName" autocomplete="off" placeholder="起个名字，如：群聊版 / 高冷版 / 蒸馏版"><button type="button" id="personaPresetSave">存为预设</button></div>
-          <small>将上方人设框里的当前内容按名字存档；同名再存会覆盖旧存档。</small>
-        </div>
-        <div class="field"><label>已保存的预设</label>
-          <div id="presetList" class="preset-list"></div>
-          <p id="presetEmpty" class="preset-empty">还没有预设。先把人设调成你想要的样子，起个名字存起来，之后就能一键切换。</p>
-          <small>「应用」立即整套换上并生效；「载入编辑」把预设内容放进上面人设框，改完记得保存；「删除」只删存档、不影响正在用的人设。</small>
-        </div>
-        <div class="field"><label>清理蒸馏内容</label>
-          <div class="preset-row"><button type="button" id="personaStrip" class="secondary">移除人设末尾的蒸馏块</button></div>
-          <small>蒸馏结果以带标记的一整块追加在人设末尾；点这个按钮把整块删掉，之后点「保存并应用」生效。想换一份蒸馏结果不用先移除，重新并入会自动替换。</small>
-        </div>
-</div></details>
-        <div class="switch-row"><div><label for="proactive">偶尔主动参与群聊</label><small>关闭后，群里只有被 @ 才会回复。</small></div><input id="proactive" type="checkbox" role="switch"></div>
+        <div class="switch-row"><div><label for="proactive">偶尔主动参与群聊</label><small>关闭后，群里只有被 @ 才会回复。</small></div><span class="galaxy-switch"><input id="proactive" type="checkbox" role="switch"><span class="galaxy-slider" aria-hidden="true"></span></span></div>
         <div class="fields two">
           <div class="field"><label for="mergeDelayMs">连续消息聚合窗口（毫秒）</label><input id="mergeDelayMs" inputmode="numeric" aria-describedby="mergeDelayMsError"><small>0–5000，默认700。连续补充会合并理解；0表示尽快处理。</small><p id="mergeDelayMsError" class="field-error" hidden></p></div>
           <div class="field"><label for="mergeMaxWaitMs">最长聚合等待（毫秒）</label><input id="mergeMaxWaitMs" inputmode="numeric" aria-describedby="mergeMaxWaitMsError"><small>100–10000，默认2000。持续输入也不会无限等候；不包括模型推理时间。</small><p id="mergeMaxWaitMsError" class="field-error" hidden></p></div>
@@ -365,78 +132,82 @@
           <div class="field"><label for="hourly">每群每小时 AI 调用上限</label><input id="hourly" type="text" inputmode="numeric" autocomplete="off" aria-describedby="hourlyHint hourlyError"><small id="hourlyHint">1–100 次，包含 @ 回复和插话判断。</small><p id="hourlyError" class="field-error" hidden></p></div>
         </div>
       </section>
-      <details id="socialMemory" class="panel settings">
-        <summary><div><div class="eyebrow">记得你说过的话</div><h2>记忆与待续话题</h2><p>事实、对话和人设分别保存；可以修正或删除</p></div><span class="expand-cue"></span></summary>
+      <section id="taskCenter" class="panel settings">
+        <div class="section-heading"><div><span class="overline">从 QQ 发起，在这里跟进</span><h2>任务中心</h2><p>查看工作进度、结果和引擎报告的文件改动。</p></div><button id="tasksRefresh" type="button" class="secondary">刷新任务</button></div>
+        <div class="task-guide"><strong>QQ 进度汇报已接入</strong><p>管理员私聊发送 <code>/mode work</code>，再描述任务。开始、关键阶段、需要确认和完成时，机器人会向该私聊汇报。</p><small>执行中可发送 <code>/补充 新要求</code> 或 <code>/stop</code>。审批和问题继续在 QQ 答复；普通群聊不执行工作任务。</small></div>
+        <p id="tasksStatus" role="status" aria-live="polite"></p>
+        <div class="task-layout"><div id="taskList" class="task-list" aria-label="工作任务列表"></div>
+          <section id="taskDetail" class="task-detail" aria-labelledby="taskTitle" hidden>
+            <span id="taskBadge" class="tag"></span><h3 id="taskTitle"></h3><p id="taskMeta" class="local-note"></p><p id="taskPhase"></p>
+            <div class="task-detail-block"><h3>任务要求</h3><p id="taskRequest" class="preserve-text"></p></div>
+            <div class="task-detail-block"><h3>执行动态</h3><ol id="taskEvents" class="task-timeline"></ol></div>
+            <div class="task-detail-block"><h3>改动文件</h3><ul id="taskFiles"></ul><small>仅列出引擎成功报告的文件编辑；通过命令产生的文件不一定在此列出。</small></div>
+            <div id="taskResultBlock" class="task-detail-block" hidden><h3>任务结果</h3><p id="taskResult" class="preserve-text"></p></div>
+            <div id="taskControls" class="task-detail-block" hidden><label for="taskSupplement">补充当前任务的要求</label><textarea id="taskSupplement" rows="3" maxlength="4000" placeholder="例如：只修改首页，完成后运行测试。"></textarea><div class="editor-actions"><button id="taskSendSupplement" type="button">提交补充</button><button id="taskStop" type="button" class="secondary">停止任务</button></div><small>补充直接进入正在执行的任务；停止不会撤销已完成的文件改动。</small></div>
+            <p id="taskActionStatus" role="status" aria-live="polite"></p>
+          </section>
+        </div>
+        <small>保留最近 100 条工作任务，每条结果最多 12000 字符。重启前未完成的任务会标记为中断，不自动重跑。</small>
+      </section>
+      <section id="socialMemory" class="panel settings">
+        <div class="section-heading"><div><div class="eyebrow">记得你说过的话</div><h2>记忆与待续话题</h2><p>事实、对话和人设分别保存；可以修正或删除</p></div></div>
         <div class="details-body">
           <p id="companionUpgrade" class="notice" hidden>后台尚未加载本次更新。请重启机器人桥接；输入的设置会保留，更新前暂不提交新配置。</p>
           <div class="fields two">
             <div class="field"><label for="memoryTurns">最近对话轮数</label><input id="memoryTurns" inputmode="numeric" aria-describedby="memoryTurnsError"><small>1–30 轮，默认15；更早的内容保留为带来源摘录和长期记忆。</small><p id="memoryTurnsError" class="field-error" hidden></p></div>
             <div class="field"><label for="contextChars">历史资料字符预算</label><input id="contextChars" inputmode="numeric" aria-describedby="contextCharsError"><small>2000–20000 字符，默认6000。优先相关记忆和最近消息；人设与当前消息另外保留，字符数不等于 token。</small><p id="contextCharsError" class="field-error" hidden></p></div>
           </div>
-          <label for="memoryScope">查看会话</label><select id="memoryScope"></select>
+          <label for="memoryScope">管理哪个聊天的记忆</label><select id="memoryScope" aria-describedby="memoryScopeHint"></select>
+          <small id="memoryScopeHint">选择你的私聊或一个群，查看该聊天的记忆、待续话题和最近保留的对话。这里不是完整聊天记录。</small>
           <p id="moodState" class="test-result"></p>
           <button type="button" id="memoryRefresh" class="secondary">刷新记忆</button>
-          <p id="memoryNotice" role="status" class="test-result"></p>
+          <p id="memoryNotice" role="status" aria-live="polite" class="test-result"></p>
+          <details class="recent-conversation" open><summary>最近保留的对话<span class="expand-cue"></span></summary><small>仅显示机器人当前保留的聊天上下文；更早的内容可能成为下方摘录。工作任务不在这里展示。</small><div id="memoryRecent" class="logs"></div></details>
           <div class="field"><label for="memoryText">补充或修正记忆</label><textarea id="memoryText" rows="2" maxlength="300" placeholder="例如：我喜欢猫，但不喜欢被叫老板"></textarea></div>
           <button type="button" id="memoryAdd" class="secondary">保存记忆</button>
+          <p id="memoryEditNotice" class="test-result" role="status" aria-live="polite"></p>
           <div id="memoryList" class="record-list"></div>
           <div class="field"><label for="topicText">想让它之后聊起的事</label><input id="topicText" maxlength="300" placeholder="例如：我在准备面试"></div>
           <button type="button" id="topicAdd" class="secondary">加入待续话题</button>
+          <small>添加后立即保存，并显示在下方。无需再点顶部「保存并应用」。</small>
+          <p id="topicNotice" class="test-result" role="status" aria-live="polite"></p>
+          <h3 class="topic-list-heading">已添加的话题 <span id="topicCount" class="tag">—</span></h3>
           <div id="topicList" class="record-list"></div>
           <details><summary>查看旧对话摘录<span class="expand-cue"></span></summary><div id="memorySummary" class="logs"></div></details>
-          <small>私聊自动记明确说出的偏好和计划；来源可核对。群聊只保留各自上下文，手动记忆不会被自动覆盖。删除会阻止同一原文再次进入长期记忆。待续话题仍遵守主动私聊时段、每日次数和不追发设置。</small>
+          <small>私聊自动记明确说出的偏好和计划；来源可核对。群聊只保留各自上下文，手动记忆不会被自动覆盖。删除会阻止同一原文再次进入长期记忆。</small>
         </div>
-      </details>
-      <details id="distill" class="panel settings">
-        <summary><div><div class="eyebrow">风格学习</div><h2>聊天记录蒸馏</h2><p>从真实聊天记录提炼说话风格，并入人设</p></div><span class="expand-cue"></span></summary>
+      </section>
+      <section id="distill" class="panel settings">
+        <div class="section-heading"><div><div class="eyebrow">风格学习</div><h2>从聊天记录学习</h2><p>从真实聊天记录提炼说话风格，并入人设</p></div></div>
         <div class="details-body">
-          <ol class="workflow" aria-label="蒸馏流程"><li><span>01</span>导入记录</li><li><span>02</span>校对内容</li><li><span>03</span>提炼风格</li></ol>
-          <div class="field"><label for="distillSource">记录来源</label><select id="distillSource"><option value="snowluma">SnowLuma 本地消息库</option><option value="paste">粘贴聊天记录</option><option value="files">文件夹 / 文件直传</option><option value="image">聊天截图识别</option></select><small>不会导入聊天记录？<a href="https://www.bilibili.com/video/BV1xhfZBWEbu/" target="_blank" rel="noreferrer">查看导入教程 ↗</a></small></div>
+          <p class="distill-instructions"><strong>怎么使用：</strong>先选一种方式导入聊天记录，检查整理后的内容，再确认并交给模型分析。结果可以编辑，最后加入个性设定并保存。</p>
+          <fieldset id="distillSources" class="source-picker"><legend>选择导入方式（四选一）</legend>
+            <label class="source-option"><input type="radio" name="distillImport" value="snowluma" checked><span><strong>读取 QQ 消息库</strong><small>使用 SnowLuma 已保存的聊天记录</small></span></label>
+            <label class="source-option"><input type="radio" name="distillImport" value="paste"><span><strong>粘贴聊天文字</strong><small>把复制的对话粘贴到文本框</small></span></label>
+            <label class="source-option"><input type="radio" name="distillImport" value="files"><span><strong>上传文件或文件夹</strong><small>选择导出的 JSON、TXT、CSV 等文件</small></span></label>
+            <label class="source-option"><input type="radio" name="distillImport" value="image"><span><strong>上传聊天截图</strong><small>在本机识别图片中的聊天文字</small></span></label>
+          </fieldset><input id="distillSource" type="hidden" value="snowluma">
+          <small>需要导出聊天记录？<a href="https://www.bilibili.com/video/BV1xhfZBWEbu/" target="_blank" rel="noreferrer">查看导入教程 ↗</a></small>
           <div class="field" id="distillImageWrap" hidden><label for="distillImage">聊天截图</label><input id="distillImage" type="file" accept="image/png,image/jpeg,image/webp,image/bmp" multiple><div class="preset-row"><small id="distillImageState">尚未选择图片</small><button type="button" id="distillImageClear" class="secondary">清空已选</button></div><small>可以一次框选多张，也可以分多次选——每次选完会自动累加进已选列表（最多 20 张），不会互相覆盖。本机 OCR 识别，长图自动分段；一对一聊天按气泡左右位置区分双方。</small></div>
           <div class="field" id="distillImageOpts" hidden><label for="distillSelfSide">我的气泡在</label>
             <select id="distillSelfSide"><option value="right">右边（微信/QQ 默认）</option><option value="left">左边</option></select>
-            <div class="switch-row"><div><label for="distillBothSides">双方风格一起蒸馏</label><small>默认只蒸馏对方的风格，你的话只作为上下文；打开后双方一起学。</small></div><input id="distillBothSides" type="checkbox" role="switch"></div>
+            <div class="switch-row"><div><label for="distillBothSides">双方风格一起蒸馏</label><small>默认只蒸馏对方的风格，你的话只作为上下文；打开后双方一起学。</small></div><span class="galaxy-switch"><input id="distillBothSides" type="checkbox" role="switch"><span class="galaxy-slider" aria-hidden="true"></span></span></div>
           </div>
           <div class="field"><label for="distillBackground">背景补充（可选）</label><textarea id="distillBackground" rows="3" placeholder="聊天记录里看不出来、但你想让它知道的事，例如：&#10;· 对方是我大学室友，认识六年了&#10;· 大一军训分到一个宿舍认识的&#10;· 我们都打 LOL，去年一起去过青岛&#10;· 他管我叫儿子，我管他叫爹，纯属互占便宜"></textarea><small>这些内容会作为既定事实参与蒸馏（回忆段会结合它），并入人设时也会原样带上，让机器人聊天时懂你们的关系和来历。内容自动保存在浏览器里。</small></div>
           <div class="field" id="distillSessionWrap"><label for="distillSession">会话</label><select id="distillSession"><option value="">全部会话（全部记录）</option></select><small>读取所选会话的全部记录，不再抽样。至少需要 10 条；记录越多，分析时间与模型用量越多。</small></div>
           <div class="field" id="distillPasteWrap" hidden><label for="distillPaste">聊天记录</label><textarea id="distillPaste" rows="6" placeholder="每行一条消息，带「昵称：内容」前缀效果最好；微信合并转发内容直接粘进来也行"></textarea><small>无条数上限，至少 10 条。每次提交的内容最大 64 MiB。手抄对话、微信合并转发文本等可直接粘贴；导出文件请使用「文件夹 / 文件直传」。</small></div>
           <div class="field" id="distillFilesWrap" hidden><label>文件夹 / 文件直传</label>
             <div class="preset-row">
-              <label class="file-btn" for="distillFolderFile" title="选择一个目录，读取其中全部记录文件"><svg class="icon" aria-hidden="true"
-  xmlns="http://www.w3.org/2000/svg"
-  width="24"
-  height="24"
-  viewBox="0 0 24 24"
-  fill="none"
-  stroke="currentColor"
-  stroke-width="2"
-  stroke-linecap="round"
-  stroke-linejoin="round"
->
-  <path d="M5 4h4l3 3h7a2 2 0 0 1 2 2v8a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2v-11a2 2 0 0 1 2 -2" />
-</svg> 选择导出文件夹</label>
+              <button type="button" class="file-btn" data-file-input="distillFolderFile" title="选择一个目录，读取其中全部记录文件">选择导出文件夹</button>
               <input id="distillFolderFile" type="file" webkitdirectory multiple hidden>
-              <label class="file-btn" for="distillRawFile" title="单独勾选一个或多个记录文件"><svg class="icon" aria-hidden="true"
-  xmlns="http://www.w3.org/2000/svg"
-  width="24"
-  height="24"
-  viewBox="0 0 24 24"
-  fill="none"
-  stroke="currentColor"
-  stroke-width="2"
-  stroke-linecap="round"
-  stroke-linejoin="round"
->
-  <path d="M17 7l-10 10" />
-  <path d="M8 7l9 0l0 9" />
-</svg> 选择文件（可多选）</label>
+              <button type="button" class="file-btn" data-file-input="distillRawFile" title="单独勾选一个或多个记录文件">选择文件（可多选）</button>
               <input id="distillRawFile" type="file" accept=".json,.jsonl,.csv,.txt,text/plain,application/json,text/csv" multiple hidden>
               <button type="button" id="distillRawClear" class="secondary">清空列表</button>
             </div>
             <small id="distillRawState">尚未选择文件或文件夹</small>
-            <small>「📁 选择导出文件夹」：在弹窗里<strong>导航到目标文件夹后直接点确认</strong>（弹窗列表只显示子文件夹、不显示文件，列表空着是正常的），如 WeFlow 的导出目录；只读其中 .json / .jsonl / .csv / .txt，自动忽略图片语音视频。「📄 选择文件」：常规文件对话框，勾选单个或多个文件。两者可多次累加、自动去重，大文件直接解析不进文本框、不卡界面。导出格式推荐 JSON（详细）或 ChatLab JSONL。</small>
+            <small>「选择导出文件夹」：在弹窗里<strong>导航到目标文件夹后直接点确认</strong>（弹窗列表只显示子文件夹、不显示文件，列表空着是正常的），如 WeFlow 的导出目录；只读其中 .json / .jsonl / .csv / .txt，自动忽略图片语音视频。「选择文件」：常规文件对话框，勾选单个或多个文件。两者可多次累加、自动去重，大文件直接解析不进文本框、不卡界面。导出格式推荐 JSON（详细）或 ChatLab JSONL。</small>
           </div>
-          <div class="distill-actions"><button type="button" id="distillRun">开始蒸馏</button><button type="button" id="distillCancel" class="secondary" hidden>取消任务</button></div>
+          <div class="distill-actions"><button type="button" id="distillRun">导入并检查记录</button><button type="button" id="distillCancel" class="secondary" hidden>取消任务</button></div>
           <div id="distillProgress" class="progress-wrap" role="status" aria-live="polite" hidden>
             <div class="progress-bar"><div id="distillProgressBar"></div></div>
             <p id="distillProgressText" class="test-result"></p>
@@ -450,61 +221,55 @@
           </div>
           <p class="field-error" id="distillError" hidden></p>
           <p id="distillRecognition" class="test-result" role="status"></p>
-          <div class="field"><label for="distillNotes">蒸馏结果</label><textarea id="distillNotes" rows="8" placeholder="点蒸馏后这里会生成风格规则和示例发言，可以先编辑再并入"></textarea></div>
+          <div class="field"><label for="distillNotes">提炼出的聊天风格</label><textarea id="distillNotes" rows="8" placeholder="完成分析后，这里会生成说话风格和示例。可以修改后加入个性设定。"></textarea></div>
           <label class="check-row"><input id="distillMemoryReviewed" type="checkbox">我已核对 [回忆] 内容，会把确认过的回忆并入人设</label>
           <button type="button" id="distillMerge" class="secondary">并入人设</button>
-          <small class="helper-note" id="distillHint">并入会追加到上方「群聊人设」末尾；再次并入会先替换旧的蒸馏块。并入后记得点「保存并应用」。</small>
+          <small class="helper-note" id="distillHint">结果会打开「聊天风格」中的人设编辑页，再次加入会替换旧的提炼结果。检查后点击「保存并应用」生效。</small>
         </div>
-      </details>
-      <details id="chatSettings" class="panel settings">
-        <summary><div><div class="eyebrow">02 / 模型</div><h2>聊天模型</h2><p>群聊和私聊闲聊共用；工作任务继续使用 Codex</p></div><span class="expand-cue"></span></summary>
+      </section>
+      <section id="chatSettings" class="panel settings">
+        <div class="section-heading"><div><div class="eyebrow">02 / 模型</div><h2>聊天模型</h2><p>群聊和私聊闲聊共用；工作任务继续使用 Codex</p></div></div>
         <div class="details-body">
-          <div class="field"><label for="chatProvider">聊天模型来源</label><select id="chatProvider" aria-describedby="chatProviderError"><option value="codex">Codex 登录账户</option><option value="openai">第三方 / OpenAI 兼容接口</option></select><p id="chatProviderError" class="field-error" hidden></p></div>
+          <div class="field" hidden><label for="chatProvider">聊天模型来源</label><select id="chatProvider" aria-describedby="chatProviderError"><option value="codex">Codex 登录账户</option><option value="openai">第三方 / OpenAI 兼容接口</option></select><p id="chatProviderError" class="field-error" hidden></p></div>
+          <p class="local-note">选择供应商和模型，点击「保存并应用」后切换。供应商分别保存密钥。</p>
+          <div class="provider-layout">
+            <aside class="provider-sidebar" aria-label="模型供应商">
+              <div id="providerList" class="provider-list"></div>
+              <button type="button" id="providerAdd" class="secondary">添加供应商</button>
+            </aside>
+            <div class="provider-editor">
+              <div id="codexProviderNotice" class="info-box"><strong>Codex 登录账户</strong><p>使用本机已登录的 Codex 账户，无需填写 API Key。</p><small>工作任务模型在「工作空间」设置。下方图片、搜索与语音设置可单独配置。</small></div>
           <div id="apiFields" hidden>
+            <p id="providerEmpty" class="local-note">先添加一个供应商，再填写地址、密钥和模型。</p>
+            <div id="providerEditorFields">
+            <div class="provider-toolbar"><div class="field"><label for="providerName">供应商名称</label><input id="providerName" maxlength="40" autocomplete="off" aria-describedby="providerNameError"><p id="providerNameError" class="field-error" hidden></p></div><div class="provider-enable-control"><label for="providerEnabled">启用该供应商</label><span class="galaxy-switch"><input id="providerEnabled" type="checkbox" role="switch"><span class="galaxy-slider" aria-hidden="true"></span></span></div><button type="button" id="providerDelete" class="secondary">删除供应商</button></div><p id="providerEnabledError" class="field-error" hidden></p>
             <div class="field"><label for="apiBase">模型服务地址（Base URL）</label><input id="apiBase" type="text" spellcheck="false" autocomplete="off" placeholder="https://你的服务地址/v1" aria-describedby="apiBaseHint apiBaseError"><small id="apiBaseHint">填写服务商的 OpenAI 兼容地址，程序调用 /chat/completions。本机模型可用 http://127.0.0.1:端口/v1。</small><p id="apiBaseError" class="field-error" hidden></p></div>
-            <div class="field"><label for="apiModel">聊天模型名称</label><input id="apiModel" type="text" spellcheck="false" autocomplete="off" placeholder="填写服务商提供的模型 ID" aria-describedby="apiModelError"><p id="apiModelError" class="field-error" hidden></p></div>
-            <div class="field"><div class="label-row"><label for="apiKey">API Key</label><span id="apiKeyState" class="tag">尚未保存</span></div><input id="apiKey" type="password" autocomplete="new-password" placeholder="填写该服务的 API Key" aria-describedby="apiKeyHint apiKeyError"><small id="apiKeyHint">保存在本机配置中，不会回显。已保存时留空保留；更换服务商须重新填写。</small><p id="apiKeyError" class="field-error" hidden></p></div>
+            <div class="field"><label for="apiProtocol">API 格式</label><select id="apiProtocol" aria-describedby="apiProtocolError"><option value="auto">自动识别（兼容旧配置）</option><option value="openai">OpenAI Chat Completions</option><option value="anthropic">Anthropic Messages</option></select><p id="apiProtocolError" class="field-error" hidden></p></div>
+            <div class="field"><div class="label-row"><label for="apiKey">API Key</label><span id="apiKeyState" class="tag">尚未保存</span></div><div class="provider-key-row"><input id="apiKey" type="password" autocomplete="new-password" placeholder="填写该服务的 API Key" aria-describedby="apiKeyHint apiKeyError"><button type="button" id="providerKeyReveal" class="secondary" aria-pressed="false">显示</button></div><small id="apiKeyHint">已保存的密钥不回显；留空只保留当前供应商的密钥。「显示」仅查看本次输入。</small><p id="apiKeyError" class="field-error" hidden></p></div>
             <label class="check-row"><input id="clearApiKey" type="checkbox">删除已保存的 API Key</label>
+            <div class="field"><label id="providerModelsLabel">模型列表</label><div id="providerModels" tabindex="-1" class="provider-models" role="group" aria-labelledby="providerModelsLabel"></div><p id="providerModelsError" class="field-error" hidden></p><button type="button" id="providerModelAdd" class="secondary">添加模型</button><small>填写服务商实际提供的模型 ID；可保存多个模型。不会自动获取远程模型列表。</small></div>
+            <div class="field"><label for="apiModel">机器人使用的模型</label><select id="apiModel" aria-describedby="apiModelError"></select><p id="apiModelError" class="field-error" hidden></p></div>
             <p class="local-note">使用后，聊天内容会发送到你填写的服务，费用由该 API Key 所属账户承担。</p>
             <button id="testChat" type="button" class="secondary">测试模型连接</button><p id="testResult" class="test-result" role="status" aria-live="polite"></p>
+            </div>
           </div>
-          <details><summary>Omni 与语音接口<span class="expand-cue"></span></summary>
-            <div class="field"><label for="voiceMode">语音处理方式</label><select id="voiceMode" aria-describedby="voiceModeError"><option value="omni">Qwen Omni · 直接听音频并回答</option><option value="transcribe">语音转写 · 原聊天模型回答</option></select><p id="voiceModeError" class="field-error" hidden></p></div>
-            <button id="omniPreset" type="button" class="secondary">使用 Qwen3.8 Omni 配置</button>
-            <div class="switch-row"><div><label for="voiceEnabled">启用 Omni / 语音接口</label><small>默认关闭。填好地址、模型和密钥再开启；回复为文字。</small></div><input id="voiceEnabled" type="checkbox" role="switch"></div>
-            <p id="omniHint" class="local-note" hidden>Omni 开启后，闲聊文字、图片、语音和主动聊天统一使用下方模型与密钥；上方聊天模型暂不参与闲聊，工作任务继续用 Codex。语音直接理解，不先转写。填写百炼对应业务空间和地域的 Chat Completions 基础地址。</p>
-            <div class="field"><label for="voiceBase">Omni / 语音服务地址</label><input id="voiceBase" type="text" spellcheck="false" autocomplete="off" placeholder="填写服务商的 API 基础地址" aria-describedby="voiceBaseError"><small id="voiceProtocolHint">语音转写需支持 /audio/transcriptions。</small><p id="voiceBaseError" class="field-error" hidden></p></div>
-            <div class="field"><label for="voiceModel">Omni / 语音模型名称</label><input id="voiceModel" spellcheck="false" autocomplete="off" placeholder="填写服务商提供的模型 ID" aria-describedby="voiceModelError"><p id="voiceModelError" class="field-error" hidden></p></div>
-            <div class="field"><div class="label-row"><label for="voiceKey">Omni / 语音 API Key</label><span id="voiceKeyState" class="tag">尚未保存语音密钥</span></div><input id="voiceKey" type="password" autocomplete="new-password" aria-describedby="voiceKeyError"><small>独立保存，不回显，也不自动复用聊天密钥。更换服务商需重新填写。</small><p id="voiceKeyError" class="field-error" hidden></p></div>
-            <label class="check-row"><input id="clearVoiceKey" type="checkbox">删除已保存的语音密钥</label>
-            <p id="voiceLimits" class="local-note">需要 OneBot 支持 get_record 及 WAV/MP3 转换。语音转写：单文件最多20 MiB、识别请求最多30秒。费用由下方密钥所属账户承担。</p>
-            <button id="testOmni" type="button" class="secondary" hidden>测试 Omni 连接（仅固定文字）</button><p id="omniTestResult" class="test-result" role="status" aria-live="polite"></p>
+            </div>
+          </div>
+          <div id="engineNotice" class="notice engine-notice" role="status" hidden></div>
+          <details id="searchSettings"><summary>图片与联网搜索<span class="expand-cue"></span></summary>
+            <div class="switch-row"><div><label for="searchEnabled">允许按需联网搜索</label><small id="searchHelp">模型按需检索，复用所选模型的密钥。</small></div><span class="galaxy-switch"><input id="searchEnabled" type="checkbox" role="switch" aria-describedby="searchEnabledError"><span class="galaxy-slider" aria-hidden="true"></span></span></div>
+            <p id="searchEnabledError" class="field-error" hidden></p>
+            <div class="switch-row"><div><label for="imageFollowup">图片追问时重新看图</label><small>此项用于支持图片追问的聊天引擎；Codex 支持文字联网搜索。你说"再看看""图里的这个"时重新附上同会话、同发送者最近的图。最多保留10分钟，仅在内存中；重启、换引擎或 /reset 会清除。</small></div><span class="galaxy-switch"><input id="imageFollowup" type="checkbox" role="switch"><span class="galaxy-slider" aria-hidden="true"></span></span></div>
+            <p id="searchStatus" class="local-note" role="status">正在读取搜索设置…</p>
+            <p id="searchLimits" class="local-note">搜索可能增加耗时与费用；不根据人脸确认身份，不编造检索结果。</p>
           </details>
         </div>
-      </details>
-      <details id="outreachSettings" class="panel settings">
-        <summary><div><div class="eyebrow">03 / 主动聊天</div><h2>偶尔来找你聊聊</h2><p>只私聊管理员，接着最近的闲聊话题</p></div><span class="expand-cue"></span></summary>
-        <div class="details-body">
-          <div class="switch-row"><div><label for="outreachEnabled">允许主动私聊我</label><small>开启后私聊切换到闲聊。工作模式下暂停，发 /mode chat 可恢复。</small></div><input id="outreachEnabled" type="checkbox" role="switch"></div>
-          <p id="outreachStatus" class="notice" role="status">正在读取主动私聊状态…</p>
-          <div class="fields two">
-            <div class="field"><label for="outreachStart">活动开始时间（北京时间，小时）</label><input id="outreachStart" inputmode="numeric" autocomplete="off" aria-describedby="outreachStartError"><p id="outreachStartError" class="field-error" hidden></p></div>
-            <div class="field"><label for="outreachEnd">活动结束时间（北京时间，小时）</label><input id="outreachEnd" inputmode="numeric" autocomplete="off" aria-describedby="outreachEndError"><p id="outreachEndError" class="field-error" hidden></p></div>
-          </div>
-          <div class="fields three">
-            <div class="field"><label for="outreachIdle">你安静多久后才考虑（分钟）</label><input id="outreachIdle" inputmode="numeric" autocomplete="off" aria-describedby="outreachIdleError"><p id="outreachIdleError" class="field-error" hidden></p></div>
-            <div class="field"><label for="outreachCheck">再次考虑的最短间隔（分钟）</label><input id="outreachCheck" inputmode="numeric" autocomplete="off" aria-describedby="outreachCheckError"><p id="outreachCheckError" class="field-error" hidden></p></div>
-            <div class="field"><label for="outreachMax">每天最多主动发几次</label><input id="outreachMax" inputmode="numeric" autocomplete="off" aria-describedby="outreachMaxError"><p id="outreachMaxError" class="field-error" hidden></p></div>
-          </div>
-          <small>不是到点必发。没有合适话题就保持安静；你没回复就不再追发。每天最多判断消息上限的 3 倍次数，每次调用会消耗所选聊天模型的额度。电脑和桥接程序需要保持运行。</small>
-          <small>QQ 指令：/outreach pause 暂停，/outreach resume 恢复。/reset 开启新会话；长期记忆与待续话题在上方单独管理。</small>
-        </div>
-      </details>
-      <details id="connection" class="panel settings">
-        <summary><div><div class="eyebrow">连接</div><h2>账号与 OneBot</h2><p>管理员、群号和本机连接信息</p></div><span class="expand-cue"></span></summary>
+      </section>
+      <section id="connection" class="panel settings">
+        <div class="section-heading"><div><div class="eyebrow">连接</div><h2>账号与 OneBot</h2><p>管理员、群号和本机连接信息</p></div></div>
         <div class="details-body">
           <div id="setupGuide" class="info-box" hidden><strong>第一次使用 · 三步开始</strong><p>1. 在「聊天模型」选择 Codex 或兼容接口。<br>2. 在 SnowLuma 登录机器人 QQ，并打开正向 WebSocket。<br>3. 在这里填写你的管理员 QQ 和群号，启用桥接后保存。看到「QQ 已连接」再用管理员私聊 /help。</p><small>仅使用兼容接口闲聊时可以先不安装 Codex；私聊默认是工作模式，请发 /mode chat 切换。</small></div>
-          <div class="switch-row"><div><label for="enabled">启用 QQ 桥接</label><small>关闭并保存后，机器人停止回复。</small></div><input id="enabled" type="checkbox" role="switch"></div>
+          <div class="switch-row"><div><label for="enabled">启用 QQ 桥接</label><small>关闭并保存后，机器人停止回复。</small></div><span class="galaxy-switch"><input id="enabled" type="checkbox" role="switch"><span class="galaxy-slider" aria-hidden="true"></span></span></div>
           <div class="fields two">
             <div class="field"><label for="owner">管理员 QQ 号</label><input id="owner" inputmode="numeric" autocomplete="off" placeholder="你用来下达任务的账号" aria-describedby="ownerError"><p id="ownerError" class="field-error" hidden></p></div>
             <div class="field"><label for="groups">允许接入的群号</label><input id="groups" autocomplete="off" placeholder="多个群号用逗号或空格分隔" aria-describedby="groupsError"><p id="groupsError" class="field-error" hidden></p></div>
@@ -513,32 +278,24 @@
           <div class="field"><label for="snowlumaDbPath">SnowLuma 消息库路径（可选）</label><input id="snowlumaDbPath" autocomplete="off" spellcheck="false" placeholder="例如 D:\SnowLuma\data\机器人QQ\messages.db" aria-describedby="snowlumaDbPathHint snowlumaDbPathError"><small id="snowlumaDbPathHint">留空寻找桌面和 OneDrive 桌面里的安装目录；多个账号或自定义安装位置请指定 messages.db 文件。粘贴、文件和截图导入不需要此项。</small><p id="snowlumaDbPathError" class="field-error" hidden></p></div>
           <div class="field"><div class="label-row"><label for="onebotToken">OneBot 连接令牌</label><span id="tokenState" class="tag">正在读取</span></div><input id="onebotToken" type="password" autocomplete="new-password" placeholder="填写 SnowLuma 中的 accessToken" aria-describedby="tokenHint onebotTokenError"><small id="tokenHint">与 SnowLuma 的 WebSocket 令牌一致。已保存时留空会保留原值。</small><p id="onebotTokenError" class="field-error" hidden></p></div>
         </div>
-      </details>
-      <details id="advanced" class="panel settings">
-        <summary><div><div class="eyebrow">03 / 工作</div><h2>模型与项目</h2><p>可选设置，留空也能正常使用</p></div><span class="expand-cue"></span></summary>
+      </section>
+      <section id="advanced" class="panel settings">
+        <div class="section-heading"><div><div class="eyebrow">03 / 工作</div><h2>模型与项目</h2><p>可选设置，留空也能正常使用</p></div></div>
         <div class="details-body">
           <div class="field"><label for="model">模型名称</label><input id="model" autocomplete="off" spellcheck="false" placeholder="留空使用 Codex 默认模型" aria-describedby="modelError"><p id="modelError" class="field-error" hidden></p></div>
           <div class="preset-row"><button id="environmentCheck" type="button" class="secondary">检查本机环境</button></div><p id="environmentResult" class="test-result" role="status" style="white-space:pre-line"></p><small>检查已保存的配置和本地文件，不调用模型、不发送 QQ 消息。完整登录检查可在终端运行 npm run doctor -- --engines。</small>
           <div class="field"><label for="projects">私聊项目</label><textarea id="projects" rows="4" spellcheck="false" placeholder="项目名=文件夹绝对路径" aria-describedby="projectsHint projectsError"></textarea><small id="projectsHint">每行一个项目，目录必须已存在。留空使用默认工作目录。</small><p id="projectsError" class="field-error" hidden></p></div>
         </div>
-      </details>
+      </section>
       <section id="metricsPanel" class="panel">
         <div class="eyebrow">运行统计 / 从本次升级开始</div><h2>回复速度与用量</h2>
-        <div class="overview metrics-grid"><div><span>今日模型调用</span><strong id="metricCalls">0</strong></div><div><span>平均模型耗时</span><strong id="metricLatency">—</strong></div><div><span>输入 / 输出 token</span><strong id="metricTokens">—</strong></div><div><span>等待处理的消息</span><strong id="metricQueue">0</strong></div></div>
+        <div class="ledger metrics-grid"><div><span class="stat-label">今日模型调用</span><strong id="metricCalls">0</strong></div><div><span class="stat-label">平均模型耗时</span><strong id="metricLatency">—</strong></div><div><span class="stat-label">输入 / 输出 token</span><strong id="metricTokens">—</strong></div><div><span class="stat-label">等待处理的消息</span><strong id="metricQueue">0</strong></div></div>
         <p id="metricDetail" class="test-result"></p><p id="metricAggregation" class="test-result"></p><small>token 按服务返回的 usage 统计。未返回的用量显示为未知，不能当作零；账单以模型服务商为准。</small>
         <details><summary>近期模型调用<span class="expand-cue"></span></summary><div id="metricRecent" class="logs"></div></details>
-        <details><summary>为什么主动聊天发送或保持安静<span class="expand-cue"></span></summary><div id="metricDecisions" class="logs"></div></details>
       </section>
     </form>
-    <aside class="context-rail">
-      <section class="panel help-panel"><div class="eyebrow">QUICK GUIDE</div><h2>在 QQ 里怎么用</h2><p>群里 @机器人聊天。管理员私聊可切换闲聊或工作模式。</p><dl class="commands"><dt>/mode chat</dt><dd>切换到闲聊</dd><dt>/mode work</dt><dd>切换到工作</dd><dt>/projects</dt><dd>查看项目</dd><dt>/project 项目名</dt><dd>切换工作目录</dd><dt>/stop</dt><dd>停止当前任务</dd><dt>/reset</dt><dd>开启新会话</dd><dt>/outreach pause</dt><dd>暂停主动私聊</dd><dt>/outreach resume</dt><dd>恢复主动私聊</dd></dl><div class="info-box"><span>当前项目</span><strong id="projectState">默认工作目录</strong><small id="workState">工作引擎会在收到任务时启动。</small></div></section>
-      <details class="panel settings activity-panel" open><summary><div><div class="eyebrow">LIVE ACTIVITY</div><h2>最近动态</h2><p id="latestLog">正在读取运行记录…</p></div><span class="expand-cue"></span></summary><div id="logs" class="logs" aria-label="运行日志"></div></details>
-      <p class="local-note">控制页只在本机运行。<a href="https://github.com/SnowLuma/SnowLuma/releases/latest" target="_blank" rel="noreferrer">SnowLuma 下载</a></p>
-    </aside>
+  </main>
   </div>
-</main>
-<div class="save-dock">
-  <div class="save-inner"><div class="save-status"><span class="save-indicator" aria-hidden="true"></span><div><strong id="draftState">正在读取配置…</strong><span id="saveHint">连接后台后即可编辑并保存。</span></div></div><div class="save-actions"><button id="discard" type="button" class="secondary" disabled>撤销修改</button><button id="save" type="button" title="也可按 Ctrl+S 保存" aria-keyshortcuts="Control+S Meta+S" disabled>保存并应用</button></div></div>
 </div>
 <div id="modalOverlay" class="modal-overlay" hidden>
   <div id="modalCard" class="modal-card" role="alertdialog" aria-modal="true" aria-labelledby="modalTitle" aria-describedby="modalMessage">

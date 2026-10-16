@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import {randomUUID} from 'node:crypto';
 import {atomicWrite} from './config.mjs';
 import {socialReply} from './conversation.mjs';
+import {readMeme} from './banter.mjs';
 
 const clip=(s,n=500)=>Array.from(String(s)).slice(0,n).join('');
 const baseline=now=>{const h=new Date(now+8*3600000).getUTCHours();return h<8||h>=23?.3:h>=12&&h<14?.5:.75;};
@@ -11,6 +12,10 @@ export class SocialState{
   configure({memoryTurns=15,contextChars=6000}={}){this.memoryTurns=memoryTurns;this.contextChars=contextChars;}
   room(key){return this.value.rooms[key]??= {recent:[],summary:[],memories:[],forgotten:[],topics:[],mood:{valence:0,energy:.7,at:0}};}
   save(){atomicWrite(this.file,this.value);}
+  previewContext(key,now,query){
+    const copy=Object.assign(Object.create(SocialState.prototype),this,{value:structuredClone(this.value),contextUsage:new Map()});
+    return copy.context(key,now,query);
+  }
   mood(key,now){
     const r=this.room(key),m=r.mood,decay=Math.exp(-Math.max(0,now-m.at)/7200000);
     m.valence*=decay;m.energy=baseline(now)+(m.energy-baseline(now))*decay;m.at=now;return m;
@@ -59,11 +64,19 @@ export class SocialState{
   replied(key,text,now=Date.now()){if(text){this.append(key,'assistant',text,now);this.save();}}
   eligibleTopics(key,now){return this.room(key).topics.filter(t=>t.status==='open'&&t.dueAt<=now&&t.askedCount<2&&(!t.askedAt||now-t.askedAt>=86400000)).slice(-3);}
   asked(key,ids,now){for(const t of this.room(key).topics)if(ids.includes(t.id)){t.askedAt=now;t.askedCount++;}this.save();}
+  teachMeme(key,term,meaning,now=Date.now()){
+    const item=this.room(key).memories.find(v=>v.manual&&readMeme(v.text)?.term===term);
+    return this.edit(key,{id:item?.id,text:'梗释义：'+JSON.stringify({term,meaning})},now);
+  }
   context(key,now=Date.now(),query=''){
     const r=this.room(key),m=this.mood(key,now);
     const queryUnits=Array.from(String(query)).slice(0,1200);
     const pairs=new Set(queryUnits.slice(0,-1).map((v,i)=>v+queryUnits[i+1]).filter(v=>!/[\s，。！？]/.test(v)));
-    const score=v=>[...pairs].reduce((n,s)=>n+(v.text.includes(s)?1:0),0);
+    const score=v=>{
+      const meme=v.manual&&readMeme(v.text);
+      const referenced=meme&&[query,...r.recent.filter(v=>v.role==='user').slice(-3).map(v=>v.text)].some(s=>String(s).includes(meme.term));
+      return (referenced?10000:0)+[...pairs].reduce((n,s)=>n+(v.text.includes(s)?1:0),0);
+    };
     const memories=[...r.memories].sort((a,b)=>score(b)-score(a)||(b.updatedAt-a.updatedAt)).slice(0,16);
     const recent=r.recent.slice(-this.memoryTurns*4);
     if(query&&recent.at(-1)?.role==='user'&&recent.at(-1).text===query)recent.pop();

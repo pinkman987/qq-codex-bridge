@@ -1,41 +1,101 @@
-import {configToDraft,buildConfig,draftEqual,reviewLines,validateReviewedLog} from './form-state.js';
+import {configToDraft,buildConfig,draftEqual,reviewLines,validateReviewedLog,isKimiK3,retainedVoiceDraft} from './form-state.js';
+import {createProviderEditor} from './provider-editor.js';
+import {createWorkbench} from './workbench.js';
 const $=id=>document.getElementById(id);
-const viewMeta={"styleSettings":{"label":"聊天风格","eyebrow":"PERSONALITY"},"socialMemory":{"label":"记忆与话题","eyebrow":"MEMORY"},"distill":{"label":"记录蒸馏","eyebrow":"DISTILLATION"},"chatSettings":{"label":"聊天模型","eyebrow":"MODEL"},"outreachSettings":{"label":"主动聊天","eyebrow":"OUTREACH"},"connection":{"label":"账号连接","eyebrow":"CONNECTION"},"advanced":{"label":"工作空间","eyebrow":"WORKSPACE"},"metricsPanel":{"label":"运行统计","eyebrow":"ANALYTICS"}};
-const viewCopy={styleSettings:['让每次聊天，都有自己的风格。','调整人设与聊天节奏，打造你喜欢的群聊伙伴。'],socialMemory:['记住重要的事，接着上次聊。','管理长期记忆和待续话题，让对话更有延续感。'],distill:['从真实对话里，找到说话的感觉。','导入记录、校对内容，再提炼成可编辑的风格规则。'],chatSettings:['选一个适合聊天的模型。','连接 Codex 或兼容接口，统一管理聊天模型与密钥。'],outreachSettings:['合适的时候，主动打个招呼。','设置活动时段和聊天频率，给主动聊天留一点分寸。'],connection:['连接账号，让机器人在线。','管理 QQ、群号与 OneBot 服务，随时查看连接状态。'],advanced:['把聊天与工作，安排得更顺手。','设置任务模型和项目目录，在 QQ 私聊里切换工作空间。'],metricsPanel:['每次响应，都有迹可循。','查看调用次数、响应速度和用量，了解机器人的运行表现。']};
+// Appearance is a browser preference, independent of the robot configuration draft.
+const THEME_KEY='echomate-theme';
+function applyTheme(theme){
+  const dark=theme==='dark';document.documentElement.dataset.theme=dark?'dark':'light';
+  $('themeLabel').textContent=dark?'浅色模式':'深色模式';
+  $('themeToggle').setAttribute('aria-label',dark?'切换到浅色模式':'切换到深色模式');
+  $('themeToggle').title=dark?'切换到浅色模式':'切换到深色模式';
+}
+try{applyTheme(localStorage.getItem(THEME_KEY));}catch{applyTheme('light');}
+$('themeToggle').addEventListener('click',()=>{
+  const theme=document.documentElement.dataset.theme==='dark'?'light':'dark';applyTheme(theme);
+  try{localStorage.setItem(THEME_KEY,theme);}catch{/* Switching still works when storage is unavailable. */}
+});
+window.addEventListener('storage',event=>{if(event.key===THEME_KEY)applyTheme(event.newValue);});
+try{$('gettingStarted').open=localStorage.getItem('echomate-guide-collapsed')!=='true';}catch{}
+$('gettingStarted').addEventListener('toggle',()=>{try{localStorage.setItem('echomate-guide-collapsed',String(!$('gettingStarted').open));}catch{}});
+const viewMeta={"home":{"label":"控制台概览","eyebrow":"OVERVIEW"},"styleSettings":{"label":"聊天风格","eyebrow":"PERSONALITY"},"socialMemory":{"label":"记忆与话题","eyebrow":"MEMORY"},"distill":{"label":"记录蒸馏","eyebrow":"DISTILLATION"},"chatSettings":{"label":"聊天模型","eyebrow":"MODEL"},"connection":{"label":"账号连接","eyebrow":"CONNECTION"},"advanced":{"label":"工作空间","eyebrow":"WORKSPACE"},"metricsPanel":{"label":"运行统计","eyebrow":"ANALYTICS"}};
+const viewCopy={home:['控制台概览','机器人状态、快捷指令与最近动态。'],styleSettings:['聊天风格','设定表达方式，调整节奏，让每次对话更合拍。'],socialMemory:['记忆与话题','留住重要的事，也能修正它记错的内容。'],distill:['学习聊天风格','从已有对话中学习表达习惯，整理成自己的个性设定。'],chatSettings:['聊天模型','配置聊天模型、图片与联网搜索，查看连接是否可用。'],connection:['账号连接','管理机器人账号、群范围与 OneBot 连接。'],advanced:['工作空间','选择任务模型与项目，在 QQ 中继续工作。'],metricsPanel:['运行统计','查看模型耗时、调用次数与消息处理情况。']};
 let activeView='styleSettings';
+viewMeta.taskCenter={label:'任务中心',eyebrow:'TASKS'};viewCopy.taskCenter=['任务中心','跟进 QQ 工作任务，随时补充要求或停止执行。'];
 function selectView(id,{scroll=true}={}){
   if(!viewMeta[id])return;
   activeView=id;
-  document.querySelectorAll('#form > .panel').forEach(panel=>panel.classList.toggle('is-active',panel.id===id));
+  const isHome=id==='home';
+  const home=$('home');if(home)home.classList.toggle('is-active',isHome);
+  document.querySelectorAll('#form > .panel').forEach(panel=>panel.classList.toggle('is-active',!isHome&&panel.id===id));
   const active=document.getElementById(id);
   if(active&&active.tagName==='DETAILS')active.open=true;
   document.querySelectorAll('[data-jump]').forEach(button=>{const selected=button.dataset.jump===id;button.classList.toggle('active',selected);if(selected)button.setAttribute('aria-current','page');else button.removeAttribute('aria-current');});
-  $('viewCrumb').textContent=viewMeta[id].label;$('viewEyebrow').textContent=viewMeta[id].eyebrow;
+  $('viewEyebrow').textContent=viewMeta[id].eyebrow;
   [$('viewTitle').textContent,$('viewDescription').textContent]=viewCopy[id];
-  const target=$(id);if(target.tagName==='DETAILS')target.open=true;
+  const target=$(id);if(target&&target.tagName==='DETAILS')target.open=true;
+  if(id==='socialMemory'&&current&&!memoryLoading&&!memoryEditing)loadMemory();
+  if(id==='taskCenter')workbench.refresh();
   if(scroll)window.scrollTo({top:0,behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth'});
 }
 document.body.classList.add('enhanced');
-selectView('styleSettings',{scroll:false});
+selectView('home',{scroll:false});
 document.querySelectorAll('[data-jump]').forEach(button=>button.addEventListener('click',()=>selectView(button.dataset.jump)));
-document.querySelector('.brand').addEventListener('click',event=>{event.preventDefault();selectView('styleSettings');});
+document.querySelector('.brand').addEventListener('click',event=>{event.preventDefault();selectView('home');});
 document.querySelector('.skip-link').addEventListener('click',event=>{event.preventDefault();$('form').setAttribute('tabindex','-1');$('form').focus();$('form').scrollIntoView({block:'start'});});
 // Summaries stay natively clickable; selecting a view auto-opens its panel.
-const fields=['snowlumaDbPath','owner','groups','ws','onebotToken','model','projects','basePersona','persona','proactive','probability','cooldown','hourly','enabled','chatProvider','apiBase','apiModel','apiKey','clearApiKey','outreachEnabled','outreachStart','outreachEnd','outreachIdle','outreachCheck','outreachMax','voiceMode','voiceEnabled','voiceBase','voiceModel','voiceKey','clearVoiceKey','memoryTurns','contextChars','mergeDelayMs','mergeMaxWaitMs'];
-const toggles=new Set(['proactive','enabled','clearApiKey','outreachEnabled','voiceEnabled','clearVoiceKey']);
+const fields=['snowlumaDbPath','owner','groups','ws','onebotToken','model','projects','basePersona','persona','proactive','probability','cooldown','hourly','enabled','chatProvider','apiBase','apiModel','apiKey','clearApiKey','memoryTurns','contextChars','mergeDelayMs','mergeMaxWaitMs'];
+const toggles=new Set(['proactive','enabled','clearApiKey']);
 const token=location.hash.slice(1);
 let current,revision,hasToken=false,savedDraft,dirty=false,saving=false,backendReady=false,lastStatus,lastSavedAt,refreshing=false,noticeKind='',saveFeedback=false;
-let hasApiKey=false,hasVoiceKey=false,testing=false,backendUnlimitedRecords=false,backendCompanion=false,backendNativeOmni=false,baseDefault=null;
-const readDraft=()=>Object.fromEntries(fields.map(id=>[id,toggles.has(id)?$(id).checked:$(id).value]));
-function fillDraft(draft){for(const id of fields){if(toggles.has(id))$(id).checked=draft[id];else $(id).value=draft[id];}updateCounter();updateProvider();}
+fields.push('searchEnabled','imageFollowup');toggles.add('searchEnabled');toggles.add('imageFollowup');
+let hasApiKey=false,hasVoiceKey=false,testing=false,backendUnlimitedRecords=false,backendCompanion=false,backendNativeOmni=false,backendSearch=false,backendKimi=false,backendCodexSearch=false,baseDefault=null;
+let providerFlags={},backendProviders=false;
+let backendWorkspace=false,workspaceBusy=false,workspaceProject=null;
+const readDraft=()=>({...retainedVoiceDraft(current),...Object.fromEntries(fields.map(id=>[id,toggles.has(id)?$(id).checked:$(id).value])),...providerEditor.read()});
+const providerEditor=createProviderEditor({$,onChange(){dirty=savedDraft?!draftEqual(readDraft(),savedDraft):true;saveFeedback=false;updateProvider();updateActions();},confirm:message=>showModal('删除供应商',message,{kind:'warning',confirmLabel:'删除',cancelLabel:'取消'})});
+function fillDraft(draft){for(const id of fields){if(toggles.has(id))$(id).checked=draft[id];else $(id).value=draft[id];}providerEditor.load(current,providerFlags,hasApiKey);updateCounter();updateProvider();savedDraft=readDraft();}
 function updateProvider(){
   $('apiFields').hidden=$('chatProvider').value!=='openai';
-  const omni=$('voiceMode').value==='omni';$('omniHint').hidden=!omni;$('testOmni').hidden=!omni;
-  $('voiceProtocolHint').textContent=omni?'使用 /chat/completions 原生音频，模型填写 qwen3.8-omni-flash；不支持 realtime。':'语音转写需支持 /audio/transcriptions。';
-  $('voiceLimits').textContent=omni?'开启后文字、图片及允许处理的语音会发给所填 Omni 服务。音频仅本轮上传；单文件最多7 MB，整轮媒体大小另有上限，模型请求最多120秒。需要 OneBot 导出 WAV/MP3；未@的群媒体不上传。费用由下方密钥所属账户承担。':'需要 OneBot 支持 get_record 及 WAV/MP3 转换。语音转写：单文件最多20 MiB、识别请求最多30秒。费用由下方密钥所属账户承担。';
+  const kimi=isKimiK3({provider:$('chatProvider').value,model:$('apiModel').value.trim(),protocol:$('apiProtocol').value});
+  const omni=!kimi&&current?.voice?.enabled&&current.voice.mode==='omni';
+  const codex=$('chatProvider').value==='codex'&&!omni;
+  $('apiBaseHint').textContent=$('apiProtocol').value==='anthropic'?'使用 Anthropic Messages 格式；地址可填写服务根路径、/v1 或完整 /v1/messages。':'填写服务商的 Chat Completions 地址，或选择自动识别兼容已有配置。';
+  $('engineNotice').hidden=!(kimi||omni);
+  $('engineNotice').textContent=kimi?'当前选择：Kimi K3 负责聊天与看图，使用原生联网工具。修改后保存生效。':omni?'当前仍使用已保存的 Omni 聊天接口；该接口的配置入口暂时移除。':'';
+  $('searchStatus').textContent=!backendSearch||kimi&&!backendKimi||codex&&!backendCodexSearch?'后台尚未加载相应搜索更新，请重启桥接。':!codex&&!kimi&&!omni?'此模型暂不支持按需联网搜索。':$('searchEnabled').checked?'已允许模型按需联网；开启不代表每条消息都已搜索。':'联网搜索已关闭。';
+  $('searchHelp').textContent=codex?'Codex 根据当前问题决定是否联网，无需额外密钥。':kimi?'Kimi K3 根据当前问题决定是否联网，使用所选供应商的密钥。':omni?'使用已有 Omni 接口的联网能力。':'目前支持 Codex 和 Kimi K3；其他模型请关闭此项。';
+  $('searchLimits').textContent='联网可能增加耗时与服务商费用。主动插话不搜索；不根据人脸确认身份，不编造结果或把模型自述当作已经搜索。';
 }
-function updateCounter(){$('personaCount').textContent=`${$('persona').value.length} / 6000`;}
-function notify(message,kind='info'){$('notice').textContent=message;$('notice').className=`notice ${kind}`;$('notice').hidden=!message;noticeKind=kind;if(kind=='error')showModal('出错了',message,{kind:'error'});else if(kind=='warning')showModal('请注意',message,{kind:'warning'});}
+function updateCounter(){
+  $('personaCount').textContent=`${$('persona').value.length} / 6000`;
+  $('personaSummary').textContent=$('persona').value.trim().replace(/\s+/g,' ').slice(0,160)||'还没有个性设定，机器人将按基础行为规则交流。';
+  const pending=current&&$('persona').value!==(current.persona||'');
+  $('personaCurrentState').textContent=pending?'未应用的草稿':'当前人设';
+  document.querySelector('.current-persona h3').textContent=pending?'编辑中的个性设定':'正在使用的个性设定';
+}
+let personaBeforeEdit='',personaReturnFocus=null;
+function openPersonaEditor({text,name='',opener=document.activeElement}={}){
+  if($('personaEditor').hidden){personaBeforeEdit=$('persona').value;personaReturnFocus=opener;}
+  if(text!==undefined){$('persona').value=text;$('persona').dispatchEvent(new Event('input',{bubbles:true}));}
+  $('personaEditorTitle').textContent=name?`编辑「${name}」`:'编辑个性设定';
+  $('personaPresetName').value=name;
+  $('personaEditorStatus').textContent='';
+  $('personaLibrary').hidden=true;$('personaEditor').hidden=false;
+  selectView('styleSettings',{scroll:false});$('persona').focus();$('personaEditor').scrollIntoView({block:'start'});
+}
+function closePersonaEditor({cancel=false,focus=true}={}){
+  if($('personaEditor').hidden)return;
+  if(cancel){$('persona').value=personaBeforeEdit;$('persona').dispatchEvent(new Event('input',{bubbles:true}));}
+  $('personaEditor').hidden=true;$('personaLibrary').hidden=false;updateCounter();
+  if(focus)(personaReturnFocus?.isConnected&&personaReturnFocus.getClientRects().length?personaReturnFocus:$('personaEditCurrent')).focus();
+}
+$('personaEditCurrent').addEventListener('click',()=>openPersonaEditor());
+$('personaNew').addEventListener('click',()=>openPersonaEditor({text:''}));
+$('personaDone').addEventListener('click',()=>{closePersonaEditor();if(dirty)notify('人设编辑已保留。点击「保存并应用」更新机器人。');});
+$('personaCancel').addEventListener('click',()=>closePersonaEditor({cancel:true}));
+$('presetReload').addEventListener('click',loadPresets);
+function notify(message,kind='info'){$('notice').textContent=message;$('notice').className=`notice ${kind}`;$('notice').hidden=!message;$('notice').setAttribute('role',kind==='error'?'alert':'status');noticeKind=kind;}
 let modalResolver=null,modalReturnFocus=null;
 function showModal(title,message,{confirmLabel='知道了',cancelLabel=null,kind='info'}={}){return new Promise(resolve=>{if(modalResolver)modalResolver(false);modalReturnFocus=document.activeElement;$('modalTitle').textContent=title;$('modalMessage').textContent=message;$('modalCard').className=`modal-card ${kind}`;$('modalOk').textContent=confirmLabel;$('modalCancel').hidden=!cancelLabel;if(cancelLabel)$('modalCancel').textContent=cancelLabel;$('modalOverlay').hidden=false;$('modalOk').focus();modalResolver=resolve;});}
 function closeModal(value){$('modalOverlay').hidden=true;const resolver=modalResolver;modalResolver=null;if(modalReturnFocus?.isConnected&&modalReturnFocus.getClientRects().length)modalReturnFocus.focus();modalReturnFocus=null;resolver?.(value);}
@@ -44,23 +104,68 @@ $('modalCancel').addEventListener('click',()=>closeModal(false));
 $('modalOverlay').addEventListener('click',event=>{if(event.target===$('modalOverlay'))closeModal(false);});
 $('modalOverlay').addEventListener('keydown',event=>{if(event.key==='Escape'){event.preventDefault();closeModal(false);}else if(event.key==='Tab'){event.preventDefault();const buttons=[$('modalCancel'),$('modalOk')].filter(button=>!button.hidden);const index=buttons.indexOf(document.activeElement);buttons[(index+(event.shiftKey?-1:1)+buttons.length)%buttons.length].focus();}});
 window.addEventListener('beforeunload',event=>{if(dirty&&!saving){event.preventDefault();event.returnValue='';}});
-function clearErrors(){for(const id of fields){$(id).removeAttribute('aria-invalid');const error=$(id+'Error');if(error){error.hidden=true;error.textContent='';}}}
-function fieldError(field,message){const element=$(field);if(!element)return;const error=$(field+'Error');if(error){error.textContent=message;error.hidden=false;}element.setAttribute('aria-invalid','true');selectView(element.closest('#form > .panel')?.id,{scroll:false});const section=element.closest('details');if(section)section.open=true;if(!$('modalOverlay').hidden)modalReturnFocus=element;else element.focus();element.scrollIntoView({block:'center',behavior:'smooth'});}
+function clearErrors(){for(const id of [...fields,'providerName','providerEnabled','apiProtocol','providerModels']){$(id).removeAttribute('aria-invalid');const error=$(id+'Error');if(error){error.hidden=true;error.textContent='';}}}
+function fieldError(field,message){const element=$(field);if(!element)return;if(field==='persona'&&$('personaEditor').hidden)openPersonaEditor();const error=$(field+'Error');if(error){error.textContent=message;error.hidden=false;}element.setAttribute('aria-invalid','true');selectView(element.closest('#form > .panel')?.id,{scroll:false});const section=element.closest('details');if(section)section.open=true;if(!$('modalOverlay').hidden)modalReturnFocus=element;else element.focus();element.scrollIntoView({block:'center',behavior:'smooth'});}
 function updateActions(){
-  $('save').disabled=saving||!backendReady;
+  $('save').disabled=saving||workspaceBusy||!backendReady;
+  $('save').setAttribute('aria-busy',String(saving));
   $('discard').disabled=saving||!dirty;
   $('save').textContent=saving?'正在保存…':'保存并应用';
   $('draftState').textContent=saving?'正在保存设置…':!backendReady?'后台暂时未连接':dirty?'有修改尚未保存':'设置已保存';
   $('draftState').className=dirty&&!saving?'dirty':'';
   const connection=!lastStatus?'':lastStatus.qqConnected?' · QQ 已连接':!lastStatus.enabled?' · 桥接已暂停':' · QQ 尚未连接';
-  $('saveHint').textContent=saving?'请稍候，正在核对保存结果。':!backendReady?'点击上方重试连接，输入的内容会保留。':dirty?'人设和聊天节奏即时更新；更换模型只重载聊天引擎，修改 QQ 地址或令牌才重连。':lastSavedAt?`最后保存 ${new Date(lastSavedAt).toLocaleTimeString('zh-CN',{hour12:false})}${connection}`:'可修改设置，然后点击「保存并应用」。';
+  $('saveHint').textContent=saving?'请稍候，正在核对保存结果。':!backendReady?'重试连接后台后即可保存，输入会保留。':dirty?'点击「保存并应用」更新机器人，切换分区会保留输入。':lastSavedAt?`最后保存 ${new Date(lastSavedAt).toLocaleTimeString('zh-CN',{hour12:false})}${connection}`:'可修改设置，然后点击「保存并应用」。';
+  updateWorkspaceActions();
 }
+function updateWorkspaceActions(){
+  const blocked=workspaceBusy||saving||!backendReady;
+  $('chooseWorkDirectory').disabled=blocked;
+  $('useWorkProject').disabled=blocked||dirty;
+  $('applyWorkDirectory').disabled=blocked||dirty||!$('workDirectory').value.trim();
+}
+function workspaceMessage(message){$('workspaceResult').textContent=message;$('workspaceResult').hidden=!message;}
+function renderWorkspace(status){
+  const selector=$('workProject'),previous=selector.value;
+  const projects=[['','默认工作目录'],...Object.entries(current.projects).map(([name,dir])=>[name,`${name} · ${dir}`])];
+  if(JSON.stringify([...selector.options].map(o=>[o.value,o.text]))!==JSON.stringify(projects))selector.replaceChildren(...projects.map(([value,label])=>new Option(label,value)));
+  selector.value=workspaceProject!==status.projectId?status.projectId||'':projects.some(([value])=>value===previous)?previous:status.projectId||'';
+  workspaceProject=status.projectId||'';
+  $('workDirectoryState').textContent=status.workDirectory||'';
+  updateWorkspaceActions();
+}
+async function applyWorkspace(input){
+  if(workspaceBusy||saving)return;
+  if(dirty){workspaceMessage('请先保存或撤销页面上的设置，再切换工作目录。');return;}
+  if(!backendReady||!backendWorkspace){workspaceMessage('后台尚未加载工作目录选择功能，请重启桥接后重试。');return;}
+  workspaceBusy=true;updateActions();workspaceMessage('正在切换工作目录…');
+  try{
+    const result=await api('/api/workspace',{method:'POST',headers:{'If-Match':revision},body:JSON.stringify(input)});
+    revision=result.revision;
+    workspaceMessage(`已切换工作目录：${result.directory}`);
+    try{acceptState(await api('/api/state'),{replaceDraft:true});}catch{workspaceMessage(`已切换工作目录：${result.directory}。暂时无法读取状态，请重试连接。`);}
+  }catch(error){workspaceMessage(error.message);}
+  finally{workspaceBusy=false;updateActions();}
+}
+$('workDirectory').addEventListener('input',updateWorkspaceActions);
+$('useWorkProject').addEventListener('click',()=>applyWorkspace({project:$('workProject').value}));
+$('applyWorkDirectory').addEventListener('click',()=>applyWorkspace({directory:$('workDirectory').value}));
+$('chooseWorkDirectory').addEventListener('click',async()=>{
+  if(workspaceBusy)return;
+  if(!backendWorkspace){workspaceMessage('后台尚未加载文件夹选择器，请重启桥接或手动填写路径。');return;}
+  workspaceBusy=true;updateActions();workspaceMessage('请在本机文件夹选择器中选择目录，或取消选择。');
+  try{
+    const result=await api('/api/workspace/pick',{method:'POST',body:'{}',timeout:130000});
+    if(result.directory){$('workDirectory').value=result.directory;workspaceMessage('已选择文件夹，点击「使用此目录」生效。');}
+    else workspaceMessage('已取消选择，当前工作目录保持不变。');
+  }catch(error){workspaceMessage(error.message);}
+  finally{workspaceBusy=false;updateActions();}
+});
 async function api(url,{timeout=10000,...options}={}){
   const controller=new AbortController();const timer=setTimeout(()=>controller.abort(),timeout);
   try{
     const response=await fetch(url,{...options,signal:controller.signal,headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json',...options.headers}});
     let result;try{result=await response.json();}catch(error){if(error.name==='AbortError')throw error;throw new Error(`后台返回了无法读取的内容（HTTP ${response.status}）。`);}
-    if(!response.ok){const error=new Error(result.error||`请求失败（HTTP ${response.status}）。`);error.field=result.field;error.status=response.status;throw error;}return result;
+    if(!response.ok){const error=new Error(result.error||`请求失败（HTTP ${response.status}）。`);error.field=result.field;error.providerId=result.providerId;error.status=response.status;throw error;}return result;
   }catch(error){
     if(error.name==='AbortError')throw new Error('请求超时，输入的设置已保留。请检查桥接程序是否运行，再重试。');
     if(error instanceof TypeError)throw new Error('无法连接本机后台。请启动桥接程序后重试，输入的设置已保留。');throw error;
@@ -79,10 +184,9 @@ function renderStatus(data){
     $('metricDetail').textContent=`失败 ${today.failures} 次；用量未知 ${today.unknownUsage} 次。`+Object.entries(today.kinds).map(([k,n])=>` ${kindLabel(k)} ${n} 次`).join('，');
     $('metricAggregation').textContent=`今日 ${today.receivedMessages||0} 条消息聚合为 ${today.batches||0} 批，合并减少 ${today.mergedRequests||0} 次逐条聊天请求。此统计不包含重写、图片和语音预处理，不能直接换算为 token 节省比例。`;
     textRows('metricRecent',metrics.recent.slice().reverse().map(v=>`${clock(v.at)} · ${kindLabel(v.kind)} · ${v.model} · ${(v.durationMs/1000).toFixed(1)} 秒 · ${v.ok?'完成':'失败'} · ${v.usage?`${v.usage.input}/${v.usage.output} token`:'用量未知'}`));
-    textRows('metricDecisions',metrics.decisions.slice().reverse().map(v=>`${clock(v.at)} · ${v.reason}`));
   }
-  const outreach=s.outreach;$('outreachStatus').textContent=outreach?`${outreach.reason}\n今天已主动发送 ${outreach.sentToday} 次，考虑 ${outreach.checksToday} 次。`:'主动私聊状态暂不可用，请更新并重启桥接程序。';
   $('projectState').textContent=s.project;$('workState').textContent=s.workReady?'工作引擎已就绪。':'工作引擎会在收到任务时启动。';
+  renderWorkspace(s);
   const entries=data.logs.slice().reverse();$('latestLog').textContent=entries[0]?`${entries[0].time} ${entries[0].message}`:'暂无运行记录';
   $('logs').replaceChildren(...entries.map(entry=>{const row=document.createElement('div');row.textContent=`${entry.time} ${entry.message}`;row.className=/失败|错误|中断/.test(entry.message)?'bad':/完成|就绪|已建立/.test(entry.message)?'good':'';return row;}));
   if(saveFeedback&&noticeKind==='success')renderSaveFeedback();
@@ -97,75 +201,70 @@ function renderToken(){
   $('onebotToken').placeholder=hasToken?'已保存，留空保留原令牌':'填写 SnowLuma 中的 accessToken';
   $('apiKeyState').textContent=hasApiKey?'API Key 已保存':'尚未保存 API Key';
   $('apiKey').placeholder=hasApiKey?'已保存，留空保留原值':'填写该服务的 API Key；本机模型可留空';
-  $('voiceKey').placeholder=hasVoiceKey?'已保存，留空保留原值':'填写 Omni / 语音服务的 API Key';
-  $('voiceKeyState').textContent=hasVoiceKey?'语音密钥已保存':'尚未保存语音密钥';
+  providerEditor.refreshKeyState();
 }
 function acceptState(data,{replaceDraft=false}={}){
   const firstLoad=!savedDraft;
   const changed=revision&&revision!==data.revision;
   current=data.config;hasToken=data.hasOnebotToken;baseDefault=data.baseDefault??baseDefault;hasApiKey=!!data.hasApiKey;hasVoiceKey=!!data.hasVoiceKey;lastSavedAt=data.savedAt;backendReady=true;backendUnlimitedRecords=data.capabilities?.unlimitedDistillRecords===true;backendCompanion=data.capabilities?.companionOptimizations===true;
+  providerFlags=data.hasProviderKeys||{};backendProviders=data.capabilities?.providerManagement===true;
+  backendWorkspace=data.capabilities?.workspaceSelection===true;
   backendNativeOmni=data.capabilities?.nativeOmni===true;
+  backendKimi=data.capabilities?.kimiK3Support===true;
+  backendCodexSearch=data.capabilities?.codexSearch===true;
+  backendSearch=data.capabilities?.nativeSearch===true;updateProvider();
   $('companionUpgrade').hidden=backendCompanion&&backendNativeOmni;
   const scope=$('memoryScope'),scopes=[`private:${current.ownerQQ}`,...current.groups.map(g=>`group:${g}`)];
-  if(JSON.stringify([...scope.options].map(v=>v.value))!==JSON.stringify(scopes)){const old=scope.value;scope.replaceChildren(...scopes.map(v=>new Option(v.startsWith('private:')?'你的私聊':`群 ${v.slice(6)}`,v)));if(scopes.includes(old))scope.value=old;}
+  if(JSON.stringify([...scope.options].map(v=>v.value))!==JSON.stringify(scopes)){const old=scope.value;scope.replaceChildren(...scopes.map(v=>new Option(v.startsWith('private:')?'你的私聊':`群 ${v.slice(6)}`,v)));if(scopes.includes(old))scope.value=old;if(activeView==='socialMemory')loadMemory();else updateMemoryActions();}
   if(!savedDraft||replaceDraft||(!dirty&&!saving&&changed)){
     revision=data.revision;savedDraft=configToDraft(current);fillDraft(savedDraft);dirty=false;
   }else if(changed&&!saving&&noticeKind!=='error')notify('后台配置已在其他页面更新。你的输入仍然保留；请点击「撤销修改」载入最新配置后再编辑。','warning');
   $('setupGuide').hidden=!!current.ownerQQ;
   if(firstLoad&&!current.ownerQQ)selectView('connection',{scroll:false});
   renderToken();renderStatus(data);$('retry').hidden=true;updateActions();
+  workbench.state(data);
 }
 async function refresh(){
   if(refreshing||saving)return;refreshing=true;
   try{const data=await api('/api/state');const wasOffline=!backendReady;acceptState(data);if(wasOffline&&noticeKind==='error')notify('已重新连接后台，输入的设置已保留。','success');}
   catch(error){backendReady=false;$('badge').textContent='后台未连接';$('badge').className='badge offline';$('retry').hidden=false;saveFeedback=false;notify(error.message,'error');updateActions();}
-  finally{refreshing=false;}
+  finally{if(!backendReady)workbench.offline();refreshing=false;}
 }
 async function save(){
-  if(saving)return;clearErrors();if(!current||!backendReady){notify('请先连接后台，再保存设置。','error');return;}
+  if(saving||workspaceBusy)return;clearErrors();if(!current||!backendReady){notify('请先连接后台，再保存设置。','error');return;}
   const draft=readDraft();let config;
+  if(!backendProviders){notify('后台尚未加载供应商管理更新，请重启桥接后保存，输入会保留。','warning');return;}
+  if(draft.chatProvider==='codex'&&!(draft.voiceMode==='omni'&&draft.voiceEnabled)&&draft.searchEnabled&&!backendCodexSearch){notify('后台尚未加载 Codex 搜索更新，请重启桥接后保存，输入会保留。','warning');return;}
+  if(isKimiK3({provider:draft.chatProvider,model:draft.apiModel.trim()})&&!backendKimi){notify('后台尚未加载 Kimi 更新，请重启桥接后保存，输入会保留。','warning');return;}
+  if((draft.searchEnabled||draft.imageFollowup)&&!backendSearch){notify('后台尚未加载搜索与图片追问更新，请重启机器人桥接后再保存。输入仍然保留。','warning');return;}
   if(draft.voiceMode==='omni'&&!backendNativeOmni){notify('后台尚未加载 Omni 更新，请重启机器人桥接后再保存。输入仍然保留。','warning');return;}
   if(!backendCompanion){notify('后台尚未载入记忆和语音更新，请重启机器人桥接后再保存。你的输入仍然保留。','warning');return;}
-  try{config=buildConfig(draft,current,hasToken,hasApiKey,hasVoiceKey);}catch(error){saveFeedback=false;notify(`还没有保存：${error.message}`,'error');fieldError(error.field,error.message);return;}
+  try{providerEditor.validate();config=buildConfig(draft,current,hasToken,hasApiKey,hasVoiceKey);}catch(error){saveFeedback=false;notify(`还没有保存：${error.message}`,'error');if(error.providerId)providerEditor.focus(error.providerId);fieldError(error.field,error.message);return;}
   saving=true;saveFeedback=false;updateActions();notify('正在保存并核对配置…');
   try{
     const result=await api('/api/config',{method:'POST',headers:{'If-Match':revision},body:JSON.stringify(config)});
     // The POST confirms the write. Readback trouble must not claim the committed save failed.
     config.onebot.accessToken='';config.chat.apiKey='';config.voice.apiKey='';current=config;hasToken=result.hasOnebotToken;hasApiKey=!!result.hasApiKey;hasVoiceKey=!!result.hasVoiceKey;revision=result.revision;lastSavedAt=result.savedAt;
-    savedDraft=configToDraft(config);fillDraft(savedDraft);dirty=false;renderToken();
+    for(const p of config.modelProviders||[])p.apiKey='';providerFlags=result.hasProviderKeys||{};
+    savedDraft=configToDraft(config);fillDraft(savedDraft);dirty=false;closePersonaEditor({focus:activeView==='styleSettings'});renderToken();
     try{acceptState(await api('/api/state'),{replaceDraft:true});}catch{backendReady=false;$('retry').hidden=false;}
     saveFeedback=true;renderSaveFeedback();
     {const s=lastStatus;const time=lastSavedAt?new Date(lastSavedAt).toLocaleTimeString('zh-CN',{hour12:false}):'';
     const conn=s?.qqConnected?'QQ 已连接。':s&&!s.enabled?'桥接已暂停。':s?.qqError?`QQ 尚未连接：${s.qqError}`:'QQ 尚未连接，后台会自动重试。';
-    showModal('保存成功',`设置已保存${time?'（'+time+'）':''}，已即时生效。
-${conn}`,{kind:'success'});}
+    notify(`设置已保存${time?'（'+time+'）':''}，已即时生效。\n${conn}`,'success');}
     if(!backendReady)notify('配置已保存；暂时无法读取连接状态，请点击重试。','success');
     else if(result.changed===false)notify('已核对：设置没有变化，连接保持不变。\n'+(lastStatus?.qqConnected?'QQ 已连接。':lastStatus?.enabled?'QQ 尚未连接，后台会自动重试。':'桥接已暂停。'),'success');
-  }catch(error){saveFeedback=false;notify(`保存失败：${error.message}`,'error');fieldError(error.field,error.message);}
+  }catch(error){saveFeedback=false;notify(`保存失败：${error.message}`,'error');if(error.providerId)providerEditor.focus(error.providerId);fieldError(error.field,error.message);}
   finally{saving=false;updateActions();}
 }
 for(const id of fields){$(id).addEventListener('input',()=>{dirty=savedDraft?!draftEqual(readDraft(),savedDraft):true;updateCounter();updateProvider();const error=$(id+'Error');if(error)error.hidden=true;$(id).removeAttribute('aria-invalid');if(['chatProvider','apiBase','apiModel','apiKey','clearApiKey'].includes(id))$('testResult').textContent='';saveFeedback=false;if(noticeKind==='success')notify('');updateActions();});}
 $('testChat').addEventListener('click',async()=>{
   if(testing||!current)return;clearErrors();let config;
-  try{config=buildConfig(readDraft(),current,hasToken,hasApiKey,hasVoiceKey);}catch(error){fieldError(error.field,error.message);$('testResult').textContent=error.message;return;}
+  try{providerEditor.validate();config=buildConfig(readDraft(),current,hasToken,hasApiKey,hasVoiceKey);}catch(error){if(error.providerId)providerEditor.focus(error.providerId);fieldError(error.field,error.message);$('testResult').textContent=error.message;return;}
   testing=true;$('testChat').disabled=true;$('testResult').textContent='正在测试模型连接…';
-  try{const result=await api('/api/chat/test',{method:'POST',body:JSON.stringify({chat:config.chat}),timeout:20000});$('testResult').textContent=result.message;}
+  try{const result=await api('/api/chat/test',{method:'POST',body:JSON.stringify({chat:config.chat,modelProviders:config.modelProviders}),timeout:isKimiK3(config.chat)?80000:20000});$('testResult').textContent=result.message;}
   catch(error){$('testResult').textContent='连接测试失败：'+error.message;fieldError(error.field,error.message);}
   finally{testing=false;$('testChat').disabled=false;}
-});
-$('omniPreset').addEventListener('click',()=>{
-  $('voiceMode').value='omni';$('voiceModel').value='qwen3.8-omni-flash';
-  dirty=!draftEqual(readDraft(),savedDraft);saveFeedback=false;updateProvider();updateActions();
-  $('omniTestResult').textContent='已选择原生 Omni。请填写百炼业务空间的基础地址和对应 API Key，再开启并保存；预设不自动复制密钥。';
-});
-$('testOmni').addEventListener('click',async()=>{
-  if(testing||!current)return;clearErrors();let config;
-  if(!backendNativeOmni){$('omniTestResult').textContent='请重启机器人桥接以加载 Omni 更新。';return;}
-  try{config=buildConfig({...readDraft(),voiceEnabled:true},current,hasToken,hasApiKey,hasVoiceKey);}catch(error){fieldError(error.field,error.message);$('omniTestResult').textContent=error.message;return;}
-  testing=true;$('testOmni').disabled=true;$('omniTestResult').textContent='正在发送固定测试文字，不发送音频或聊天记录…';
-  try{const result=await api('/api/omni/test',{method:'POST',body:JSON.stringify({voice:config.voice}),timeout:20000});$('omniTestResult').textContent=result.message;}
-  catch(error){$('omniTestResult').textContent='Omni 测试失败：'+error.message;fieldError(error.field,error.message);}
-  finally{testing=false;$('testOmni').disabled=false;}
 });
 const DISTILL_MARKER='【从真实聊天记录蒸馏的风格】';
 const DISTILL_END='【蒸馏块结束】';
@@ -180,7 +279,7 @@ async function loadPresets(){
   const list=$('presetList');
   try{
     const data=await api('/api/personas');
-    const names=Object.keys(data.presets);
+    const names=Object.keys(data.presets);$('presetCount').textContent=String(names.length);$('presetEmpty').textContent='还没有预设。点击「新建人设」写下设定，再保存到预设库。';
     $('presetEmpty').hidden=names.length>0;
     list.replaceChildren(...names.map(name=>{
       const preset=data.presets[name];
@@ -192,14 +291,14 @@ async function loadPresets(){
       const preview=document.createElement('p');preview.className='preset-preview';
       preview.textContent=(preset.text||'').replace(/\s+/g,' ').slice(0,80)||'（空人设）';
       const actions=document.createElement('div');actions.className='preset-row';
-      for(const [act,label,cls] of [['apply','应用',''],['load','载入编辑','secondary'],['delete','删除','secondary']]){
+      for(const [act,label,cls] of [['load','载入编辑','secondary'],['delete','删除预设','text-button danger']]){
         const button=document.createElement('button');button.type='button';button.textContent=label;button.dataset.act=act;if(cls)button.className=cls;
         actions.append(button);
       }
       card.append(head,preview,actions);
       return card;
     }));
-  }catch{}
+  }catch{list.replaceChildren();$('presetCount').textContent='—';$('presetEmpty').hidden=false;$('presetEmpty').textContent='预设暂时未能载入，请点击「刷新列表」重试。';}
 }
 $('presetList').addEventListener('click',async event=>{
   const button=event.target.closest('button[data-act]');
@@ -207,22 +306,13 @@ $('presetList').addEventListener('click',async event=>{
   const name=button.closest('.preset-card')?.dataset.name;
   if(!name)return;
   const act=button.dataset.act;
-  if(act==='apply'){
-    if(dirty){const go=await showModal('有修改尚未保存',`当前页面有还没保存的修改，应用预设「${name}」会丢弃这些修改。要继续吗？`,{kind:'warning',confirmLabel:'丢弃修改并切换',cancelLabel:'取消'});if(!go)return;}
-    try{
-      const result=await api('/api/personas/apply',{method:'POST',body:JSON.stringify({name})});
-      revision=result.revision;lastSavedAt=result.savedAt;
-      await acceptState(await api('/api/state'),{replaceDraft:true});
-      showModal('切换成功',`已切换到人设「${name}」并生效，下一轮聊天就用新性格。`,{kind:'success'});
-    }catch(error){notify(error.message,'error');}
-  }else if(act==='load'){
-    if(dirty){const go=await showModal('有修改尚未保存',`载入预设「${name}」会覆盖文本框里还没保存的修改。要继续吗？`,{kind:'warning',confirmLabel:'覆盖并载入',cancelLabel:'取消'});if(!go)return;}
+  if(act==='load'){
+    button.disabled=true;
     try{
       const data=await api('/api/personas');
-      $('persona').value=data.presets[name]?.text||'';
-      $('persona').dispatchEvent(new Event('input',{bubbles:true}));
-      notify(`预设「${name}」已载入人设框，改完记得点「保存并应用」。`,'info');
-    }catch(error){notify(error.message,'error');}
+      if(!data.presets[name])throw new Error('这个预设已被删除，请刷新列表。');
+      openPersonaEditor({text:data.presets[name].text||'',name,opener:button});
+    }catch(error){notify(error.message,'error');}finally{button.disabled=false;}
   }else if(act==='delete'){
     const go=await showModal('删除预设',`确定删除预设「${name}」？只删存档，不影响正在用的人设。`,{kind:'warning',confirmLabel:'删除',cancelLabel:'取消'});
     if(!go)return;
@@ -231,13 +321,18 @@ $('presetList').addEventListener('click',async event=>{
   }
 });
 $('personaPresetSave').addEventListener('click',async()=>{
-  const name=$('personaPresetName').value.trim();
-  if(!name){notify('请先填写预设名称。','error');return;}
+  const name=$('personaPresetName').value.trim(),button=$('personaPresetSave');
+  if(!name){$('personaEditorStatus').textContent='请先填写预设名称。';$('personaPresetName').focus();return;}
+  const text=$('persona').value;
+  button.disabled=true;
+  $('personaEditorStatus').textContent='正在保存预设…';
   try{
-    await api('/api/personas',{method:'POST',body:JSON.stringify({name,text:$('persona').value})});
-    $('personaPresetName').value='';await loadPresets();
-    notify(`已把当前人设存为预设「${name}」。`,'success');
-  }catch(error){notify(error.message,'error');}
+    const data=await api('/api/personas');
+    if(Object.hasOwn(data.presets,name)&&!await showModal('替换同名预设',`预设「${name}」已经存在，要用当前编辑内容替换吗？`,{confirmLabel:'替换预设',cancelLabel:'取消'})){$('personaEditorStatus').textContent='已取消替换，原预设保持不变。';return;}
+    await api('/api/personas',{method:'POST',body:JSON.stringify({name,text})});
+    await loadPresets();
+    $('personaEditorStatus').textContent=`已保存预设「${name}」。如需用于机器人，请点击「保存并应用」。`;
+  }catch(error){$('personaEditorStatus').textContent=`预设未保存：${error.message}`;}finally{button.disabled=false;if(activeView==='styleSettings'&&!$('personaEditor').hidden)button.focus();}
 });
 $('environmentCheck').addEventListener('click',async()=>{
   const button=$('environmentCheck');button.disabled=true;$('environmentResult').textContent='正在检查已保存的配置…';
@@ -250,13 +345,6 @@ $('basePersonaReset').addEventListener('click',()=>{
   $('basePersona').dispatchEvent(new Event('input',{bubbles:true}));
   notify('已恢复默认 15 条基础规则，点「保存并应用」生效。','info');
 });
-$('personaStrip').addEventListener('click',()=>{
-  const stripped=stripDistillBlock($('persona').value);
-  if(stripped===null){notify('人设里没有蒸馏块。','info');return;}
-  $('persona').value=stripped;
-  $('persona').dispatchEvent(new Event('input',{bubbles:true}));
-  notify('蒸馏块已从人设中移除，请点「保存并应用」。','info');
-});
 async function loadDistillSessions(){
   const select=$('distillSession');
   try{
@@ -265,6 +353,10 @@ async function loadDistillSessions(){
   }catch{select.replaceChildren(new Option('全部会话（全部记录）',''));}
 }
 $('distill').addEventListener('toggle',()=>{if($('distill').open&&$('distillSession').options.length<=1)loadDistillSessions();});
+$('distillSources').addEventListener('change',event=>{
+  if(event.target.name!=='distillImport'||!event.target.checked)return;
+  $('distillSource').value=event.target.value;$('distillSource').dispatchEvent(new Event('change'));
+});
 $('distillSource').addEventListener('change',()=>{
   const source=$('distillSource').value;
   $('distillPasteWrap').hidden=source!=='paste';
@@ -331,7 +423,7 @@ function renderDistillJob(job){
   const elapsed=Math.round((Date.now()-(job.startedAt||Date.now()))/1000);
   $('distillProgressText').textContent=`${job.detail||'处理中…'} · 已用时 ${elapsed} 秒`;
   $('distillRun').disabled=active;
-  $('distillRun').textContent=active?'蒸馏进行中…':'开始蒸馏';
+  $('distillRun').textContent=active?'正在处理记录…':'导入并检查记录';
   $('distillCancel').hidden=!active;
   if(job.id&&job.phase!=='idle')activeDistillId=job.id;
   $('distillReview').hidden=job.phase!=='review';
@@ -380,7 +472,7 @@ $('distillRun').addEventListener('click',async()=>{
     const result=await api('/api/distill',{method:'POST',body:JSON.stringify(body),timeout:120000});
     activeDistillId=result.id;shownDistillResultId=null;$('distillPreview').dataset.jobId='';
     await syncDistillJob();
-  }catch(error){$('distillError').textContent=error.message;$('distillError').hidden=false;button.disabled=false;button.textContent='开始蒸馏';}
+  }catch(error){$('distillError').textContent=error.message;$('distillError').hidden=false;button.disabled=false;button.textContent='导入并检查记录';}
 });
 $('distillConfirm').addEventListener('click',async()=>{
   const button=$('distillConfirm');button.disabled=true;
@@ -398,7 +490,7 @@ $('distillCancel').addEventListener('click',async()=>{
 });
 $('distillMerge').addEventListener('click',()=>{
   const notes=$('distillNotes').value.trim();
-  if(!notes){notify('蒸馏结果框是空的：请先点「开始蒸馏」生成内容，或把内容粘贴进蒸馏结果框再并入。','error');return;}
+  if(!notes){notify('蒸馏结果框是空的：请先导入记录并完成分析，或把内容粘贴进蒸馏结果框再并入。','error');return;}
   const rows=notes.split(/\r?\n/).map(line=>line.trim());
   const memoryStart=rows.indexOf('[回忆]');
   const memories=memoryStart<0?[]:rows.slice(memoryStart+1).filter(line=>line&&!/^\[.*\]$/.test(line));
@@ -406,6 +498,7 @@ $('distillMerge').addEventListener('click',()=>{
   const base=stripDistillBlock($('persona').value)??$('persona').value;
   const background=$('distillBackground').value.trim();
   const bgBlock=background?`\n[背景]\n${background.split(/\r?\n/).map(line=>line.trim()).filter(Boolean).join('\n')}`:'';
+  openPersonaEditor();
   $('persona').value=`${base}\n${DISTILL_MARKER}\n${notes.split(/\r?\n/).map(line=>line.trim()).filter(Boolean).join('\n')}${bgBlock}\n${DISTILL_END}`;
   $('persona').dispatchEvent(new Event('input',{bubbles:true}));
   if($('persona').value.length>6000)notify('蒸馏结果已并入，但人设超过 6000 字上限，请精简蒸馏结果或原人设后再保存。','warning');
@@ -416,7 +509,7 @@ $('form').addEventListener('submit',event=>{event.preventDefault();save();});
 document.addEventListener('keydown',event=>{if((event.ctrlKey||event.metaKey)&&event.key.toLowerCase()==='s'){event.preventDefault();save();}});
 $('discard').addEventListener('click',async()=>{
   if(dirty){const go=await showModal('撤销修改','将放弃当前页面上所有未保存的修改，恢复到最近一次保存的设置。要继续吗？',{kind:'warning',confirmLabel:'放弃修改',cancelLabel:'取消'});if(!go)return;}
-  try{acceptState(await api('/api/state'),{replaceDraft:true});clearErrors();saveFeedback=false;notify('已恢复到最新保存的设置。','info');}catch(error){notify(error.message,'error');}
+  try{acceptState(await api('/api/state'),{replaceDraft:true});clearErrors();closePersonaEditor({focus:activeView==='styleSettings'});saveFeedback=false;notify('已恢复到最新保存的设置。','info');}catch(error){notify(error.message,'error');}
 });
 $('retry').addEventListener('click',refresh);
 function clock(at){return new Date(at).toLocaleString('zh-CN',{hour12:false});}
@@ -425,7 +518,7 @@ function textRows(id,rows){$(id).replaceChildren(...(rows.length?rows:['暂无�
 function renderMemory(data){
   const m=data.mood;$('moodState').textContent=`当前语气：${m.valence<-.15?'沉静':m.valence>.15?'愉快':'平常'}；聊天活跃度：${Math.round(m.energy*100)}%。状态会随对话变化，并逐渐回到平常。`;
   const list=(id,items,kind)=>{
-    $(id).replaceChildren(...items.map(item=>{
+    $(id).replaceChildren(...items.slice().reverse().map(item=>{
       const card=document.createElement('div');card.className='memory-card';
       const input=document.createElement('textarea');input.value=item.text;input.maxLength=300;input.rows=2;input.setAttribute('aria-label',kind==='memory'?'记忆内容':'话题内容');
       const meta=document.createElement('small');meta.textContent=kind==='memory'?`${item.manual?'手动设置':'原文提取'} · 来源：${item.source} · ${clock(item.updatedAt||item.createdAt)}`:`${item.status==='closed'?'已结束':'待续'} · 已问 ${item.askedCount||0} 次${item.askedAt?' · 最近问于 '+clock(item.askedAt):''}`;
@@ -437,29 +530,60 @@ function renderMemory(data){
     }));
     if(!items.length)textRows(id,[kind==='memory'?'暂无长期记忆，可手动补充。':'暂无待续话题。']);
   };
-  list('memoryList',data.memories,'memory');list('topicList',data.topics,'topic');textRows('memorySummary',data.summary.map(v=>`${clock(v.at)} · ${v.name||'你'}：${v.text}`));
+  list('memoryList',data.memories,'memory');list('topicList',data.topics,'topic');$('topicCount').textContent=String(data.topics.length);textRows('memorySummary',data.summary.map(v=>`${clock(v.at)} · ${v.name||'你'}：${v.text}`));
+  textRows('memoryRecent',(data.recent||[]).length?data.recent.map(v=>`${clock(v.at)} · ${v.role==='assistant'?'机器人':v.name||'你'}：${v.text}`):['这个聊天暂无已保留的对话。先进行闲聊，再刷新查看。']);
+}
+let memoryRequest=0,memoryLoading=false,memoryEditing=false,loadedMemoryScope='';
+function updateMemoryActions(){
+  const blocked=memoryLoading||memoryEditing||loadedMemoryScope!==$('memoryScope').value;
+  for(const button of $('socialMemory').querySelectorAll('button'))button.disabled=button.id==='memoryRefresh'?memoryEditing:blocked;
+  $('memoryScope').disabled=memoryEditing;
 }
 async function loadMemory(){
-  if(!current)return;
-  try{const result=await api('/api/social?scope='+encodeURIComponent($('memoryScope').value));renderMemory(result.data);$('memoryNotice').textContent='已读取最新记忆。';}
-  catch(error){$('memoryNotice').textContent=error.message;}
+  if(!current||memoryEditing)return;
+  const request=++memoryRequest,scope=$('memoryScope').value;memoryLoading=true;loadedMemoryScope='';
+  $('memoryNotice').textContent='正在读取所选聊天的记忆和最近对话…';$('moodState').textContent='';
+  $('topicNotice').textContent='正在读取话题…';$('memoryEditNotice').textContent='';$('topicCount').textContent='—';
+  for(const id of ['memoryList','topicList','memorySummary','memoryRecent'])textRows(id,['正在读取…']);updateMemoryActions();
+  try{
+    const result=await api('/api/social?scope='+encodeURIComponent(scope));
+    if(request!==memoryRequest||scope!==$('memoryScope').value)return;
+    renderMemory(result.data);loadedMemoryScope=scope;
+    $('topicNotice').textContent='';
+    $('memoryNotice').textContent=`已读取${scope.startsWith('private:')?'你的私聊':`群 ${scope.slice(6)}`}的记忆和最近对话。`;
+  }catch(error){
+    if(request!==memoryRequest||scope!==$('memoryScope').value)return;
+    $('memoryNotice').textContent='读取失败：'+error.message;
+    $('topicNotice').textContent='话题未能加载，请点击上方「刷新记忆」重试。';
+    for(const id of ['memoryList','topicList','memorySummary','memoryRecent'])textRows(id,['暂未读取到内容，请点击「刷新记忆」重试。']);
+  }finally{if(request===memoryRequest){memoryLoading=false;updateMemoryActions();}}
 }
 async function editMemory(body){
-  const buttons=$('socialMemory').querySelectorAll('button');for(const button of buttons)button.disabled=true;
-  try{const result=await api('/api/social?scope='+encodeURIComponent($('memoryScope').value),{method:'POST',body:JSON.stringify(body)});renderMemory(result.data);$('memoryNotice').textContent='已保存，下次回复生效。';if(!body.id){$(body.kind==='topic'?'topicText':'memoryText').value='';}}
-  catch(error){$('memoryNotice').textContent='没有保存：'+error.message;}
-  finally{for(const button of buttons)button.disabled=false;}
+  const feedback=$(body.kind==='topic'?'topicNotice':'memoryEditNotice');
+  if(memoryLoading||memoryEditing||loadedMemoryScope!==$('memoryScope').value){feedback.textContent='请先等待读取完成；读取失败时请点击「刷新记忆」。';return;}
+  if(!body.remove&&(!String(body.text||'').trim()||String(body.text).length>300)){feedback.textContent='请填写 1–300 个字符后再添加或保存。';if(!body.id)$(body.kind==='topic'?'topicText':'memoryText').focus();return;}
+  const scope=$('memoryScope').value;
+  memoryEditing=true;updateMemoryActions();feedback.textContent=body.remove?'正在删除…':'正在保存…';
+  try{
+    const result=await api('/api/social?scope='+encodeURIComponent(scope),{method:'POST',body:JSON.stringify(body)});
+    if(scope!==$('memoryScope').value)return;
+    renderMemory(result.data);feedback.textContent=body.remove?'已删除。':body.id?'修改已保存。':'已添加到下方列表，已自动保存。';
+    if(!body.id){const input=$(body.kind==='topic'?'topicText':'memoryText');if(input.value===body.text)input.value='';if(activeView==='socialMemory')$(body.kind==='topic'?'topicList':'memoryList').firstElementChild?.scrollIntoView({block:'nearest',behavior:'auto'});}
+  }
+  catch(error){feedback.textContent='没有保存：'+error.message;}
+  finally{memoryEditing=false;if(scope!==$('memoryScope').value)loadMemory();else updateMemoryActions();}
 }
-$('socialMemory').addEventListener('toggle',()=>{if($('socialMemory').open)loadMemory();});
 $('memoryScope').addEventListener('change',loadMemory);$('memoryRefresh').addEventListener('click',loadMemory);
 $('memoryAdd').addEventListener('click',()=>editMemory({kind:'memory',text:$('memoryText').value}));
 $('topicAdd').addEventListener('click',()=>editMemory({kind:'topic',text:$('topicText').value}));
+const workbench=createWorkbench({$,api,getView:()=>activeView,getDraft:()=>{providerEditor.validate();return buildConfig(readDraft(),current,hasToken,hasApiKey,hasVoiceKey);}});
 await refresh();
 loadPresets();
 function fitSaveDock(){const dock=document.querySelector('.save-dock');if(!dock)return;const pad=dock.offsetHeight+48;document.documentElement.style.setProperty('--dock-pad',pad+'px');}
 window.addEventListener('resize',fitSaveDock);
-setInterval(fitSaveDock,2500);
+if(typeof ResizeObserver==='function')new ResizeObserver(fitSaveDock).observe(document.querySelector('.save-dock'));
 fitSaveDock();
+document.querySelectorAll('[data-file-input]').forEach(button=>button.addEventListener('click',()=>$(button.dataset.fileInput).click()));
 try{const savedNotes=localStorage.getItem('distillNotesDraft');if(savedNotes)$('distillNotes').value=savedNotes;}catch{}
 $('distillNotes').addEventListener('input',()=>{$('distillMemoryReviewed').checked=false;try{localStorage.setItem('distillNotesDraft',$('distillNotes').value);}catch{}});
 try{const savedBackground=localStorage.getItem('distillBackgroundDraft');if(savedBackground)$('distillBackground').value=savedBackground;}catch{}

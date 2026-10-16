@@ -20,6 +20,10 @@
     "model": "",
     "apiKey": ""
   },
+  "search": {
+    "enabled": false,
+    "imageFollowup": true
+  },
   "outreach": {
     "enabled": false,
     "startHour": 10,

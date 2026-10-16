@@ -52,7 +52,8 @@ test('outside whitelist and self messages are ignored',async t=>{
 test('duplicates are not submitted twice and mode switching preserves distinct threads',async t=>{
   const f=fixture(t);const msg=event();await f.bridge.handle(msg);await f.bridge.handle(msg);assert.equal(f.work.runs.length,1);
   await f.bridge.handle(event({text:'/mode chat',id:2}));await f.bridge.handle(event({text:'聊两句',id:3}));
-  assert.equal(f.social.runs.length,1);assert.ok(f.bridge.sessions['private:123456:work:default']);assert.ok(f.bridge.sessions['private:123456:social']);
+  assert.equal(f.social.runs.length,1);assert.ok(f.bridge.sessions['private:123456:work:default']);assert.ok(f.bridge.sessions['private:123456:social:search-off']);
+  assert.notEqual(f.social.runs[0].id,f.work.runs[0].id);
 });
 test('spontaneous participation requires context and obeys cooldown and hourly call budget',async t=>{
   const f=fixture(t,{social:{...defaults.social,maxRepliesPerHour:1}});
@@ -127,7 +128,7 @@ test('an unsuccessful turn is not reported as completion and final phase exclude
   client.receive({method:'item/completed',params:{threadId:'t',item:{id:'2',type:'agentMessage',phase:'final_answer',text:'完成'}}});
   client.receive({method:'turn/completed',params:{threadId:'t',turn:{status:'completed'}}});assert.equal(resolved,'完成');assert.equal(rejected,undefined);
   client.turns.set('t',{timer:setTimeout(()=>{},1000),messages:new Map(),resolve:v=>resolved=v,reject:e=>rejected=e});
-  client.receive({method:'turn/completed',params:{threadId:'t',turn:{status:'failed',error:{message:'failed-test'}}}});assert.equal(rejected.message,'failed-test');
+  client.receive({method:'turn/completed',params:{threadId:'t',turn:{status:'failed',error:{message:'failed-test'}}}});assert.match(rejected.message,/Codex 请求未完成/);assert.equal(rejected.message.includes('failed-test'),false);
 });
 test('parseGroupDirective extracts optional group id and leaves plain text untouched',()=>{
   assert.deepEqual(parseGroupDirective('普通回复'),{text:'普通回复',directive:null});
@@ -184,7 +185,7 @@ test('social replies split into sequential bubbles while work replies stay whole
   f.work.run=async()=>'x'.repeat(80);
   await f.bridge.handle(event({text:'跑个任务',id:4}));
   const workReply=f.onebot.sent.filter(s=>s.target.type==='private').at(-1);
-  assert.equal(workReply.text.length,80);assert.equal(workReply.text.includes('\n'),false);
+  assert.ok(workReply.text.startsWith('x'.repeat(80)+'\n\n用量：'));assert.equal(workReply.text.match(/x{80}/g).length,1);assert.ok(!workReply.text.includes('任务已完成'));
 });
 test('persona change rotates social threads while work threads survive',async t=>{
   const f=fixture(t);

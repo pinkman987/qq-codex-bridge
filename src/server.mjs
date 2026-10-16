@@ -8,9 +8,13 @@ import { ROOT, STATE, loadConfig, validateConfig, atomicWrite, defaults } from '
 import { Bridge } from './bridge.mjs';
 import { chatCompletion } from './chat-api.mjs';
 import { findSnowlumaDb, extractChatLog, listSessions, distillPrompt, normalizePastedLog, parseStructuredLog, linesFromBubbles, chunkLines, observationPrompt, synthesizePrompt, mergeObservationsPrompt, flattenChatRecords } from './distill.mjs';
-import { validateReviewedLog } from '../public/form-state.js';
+import { validateReviewedLog,isKimiK3 } from '../public/form-state.js';
+import {responsesCompletion} from './responses.mjs';
 import { inspectEnvironment } from './environment.mjs';
 import { ocrImageFile } from './ocr.mjs';
+import {resolveProviderCredentials,providerKeyFlags} from './providers.mjs';
+import {pickWorkDirectory,resolveWorkDirectory} from './workspace.mjs';
+import {playgroundEngine,runPlayground,validateTestMessage} from './playground.mjs';
 
 export function configRevision(config) {
   const stable=value=>Array.isArray(value)?value.map(stable):value&&typeof value==='object'?Object.fromEntries(Object.keys(value).sort().map(key=>[key,stable(value[key])])):value;
@@ -22,13 +26,16 @@ async function readBody(req,limit,message){
   return Buffer.concat(chunks).toString('utf8');
 }
 export function createConsole(bridge, { token, logs=[],config=bridge.config,onSave=()=>{},
-  testChat=(chat,onUsage)=>chatCompletion(chat,[{role:'user',content:'连接测试。只回复：连接成功。'}],{timeoutMs:15000,onUsage,...(chat.nativeOmni?{stream:true,extraBody:{modalities:['text'],reasoning_effort:'none'}}:{})}),
+  chooseWorkDirectory=pickWorkDirectory,
+  createPlaygroundEngine=playgroundEngine,
+  testChat=(chat,onUsage)=>isKimiK3(chat)?responsesCompletion(chat,[{role:'user',content:'连接测试。只回复：连接成功。'}],{timeoutMs:60000,onUsage}):chatCompletion(chat,[{role:'user',content:'连接测试。只回复：连接成功。'}],{timeoutMs:15000,onUsage,...(chat.nativeOmni?{stream:true,extraBody:{modalities:['text'],reasoning_effort:'none'}}:{})}),
   persist=next=>atomicWrite(path.join(ROOT,'config.json'),next),
   personasFile=path.join(STATE,'personas.json'),
   distillJobFile=path.join(STATE,'distill-job.json'),
   savedAt=fs.existsSync(path.join(ROOT,'config.json'))?fs.statSync(path.join(ROOT,'config.json')).mtime.toISOString():null }={}) {
   let current=config,lastSavedAt=savedAt;
-  let testing=false;
+  let testing=false,pickingDirectory=false;
+  const playgroundJobs=new Map();
   let distillProgress=null,distillTask=null;
   try{distillProgress=JSON.parse(fs.readFileSync(distillJobFile,'utf8'));}catch{}
   if(distillProgress && !['done','error','cancelled'].includes(distillProgress.phase)){
@@ -54,6 +61,7 @@ export function createConsole(bridge, { token, logs=[],config=bridge.config,onSa
     endDistill(task,phase,detail);
   };
   const resolveChat=input=>{
+    resolveProviderCredentials(input,current);
     if(input.chat?.apiKey==='__KEEP__'){
       if(new URL(input.chat.baseUrl||current.chat.baseUrl).origin!==new URL(current.chat.baseUrl).origin){const error=new Error('更换模型服务后，请重新填写该服务的 API Key');error.field='apiKey';throw error;}
       input.chat.apiKey=current.chat.apiKey;
@@ -219,7 +227,7 @@ export function createConsole(bridge, { token, logs=[],config=bridge.config,onSa
       return res.end(fs.readFileSync(path.join(ROOT,'node_modules','@picocss','pico','css','pico.min.css')));
     }
     const assets={'/':['index.html','text/html'],'/app.js':['app.js','text/javascript'],
-      '/form-state.js':['form-state.js','text/javascript'],'/app.css':['app.css','text/css']};
+      '/form-state.js':['form-state.js','text/javascript'],'/provider-state.js':['provider-state.js','text/javascript'],'/provider-editor.js':['provider-editor.js','text/javascript'],'/workbench.js':['workbench.js','text/javascript'],'/app.css':['app.css','text/css']};
     if(req.method==='GET' && Object.hasOwn(assets,url.pathname)) {
       const [file,type]=assets[url.pathname];
       res.writeHead(200,{...headers,'Content-Type':`${type}; charset=utf-8`,
@@ -231,9 +239,62 @@ export function createConsole(bridge, { token, logs=[],config=bridge.config,onSa
     const suppliedBytes=Buffer.from(supplied),tokenBytes=Buffer.from(token);
     if(suppliedBytes.length!==tokenBytes.length || !timingSafeEqual(suppliedBytes,tokenBytes))return reply(401,{error:'请从启动器或启动日志中的完整地址打开控制页'});
     if(req.method==='GET' && url.pathname==='/api/environment')return reply(200,inspectEnvironment(current));
+    if(req.method==='GET'&&url.pathname==='/api/tasks')return reply(200,{tasks:bridge.taskList()});
+    if(req.method==='POST'&&['/api/tasks/stop','/api/tasks/supplement'].includes(url.pathname)){
+      try{
+        const input=JSON.parse(await readBody(req,24000,'任务操作内容太长。'));
+        if(url.pathname.endsWith('/stop'))await bridge.stopTask(input.id);else await bridge.supplementTask(input.id,input.text);
+        return reply(200,{ok:true,tasks:bridge.taskList()});
+      }catch(error){return reply(409,{error:error.message});}
+    }
+    if(req.method==='POST'&&url.pathname==='/api/playground/cancel'){
+      try{const {id}=JSON.parse(await readBody(req,1024,'请求太长。'));const job=playgroundJobs.get(id);if(job){job.controller.abort();job.engine.stop();}return reply(200,{ok:true});}
+      catch{return reply(400,{error:'停止请求格式不正确。'});}
+    }
+    if(req.method==='POST'&&url.pathname==='/api/playground'){
+      let job,id,disconnect;
+      try{
+        const input=JSON.parse(await readBody(req,180000,'试聊内容过长，请清空对话后重试。'));validateTestMessage(input);id=input.id;
+        if(playgroundJobs.has(id)||playgroundJobs.size>=2)return reply(409,{error:'已有试聊正在生成，请稍候。'});
+        let next=current;
+        if(input.mode==='draft'){
+          const draft=input.config;
+          if(!draft||typeof draft!=='object')throw new Error('缺少试聊草稿。');
+          // Only chat-related draft fields are eligible. Account/workspace state stays unchanged.
+          next=validateConfig(resolveChat({...current,chat:draft.chat,modelProviders:draft.modelProviders??current.modelProviders,model:draft.model,persona:draft.persona,basePersona:draft.basePersona,search:draft.search,voice:{...current.voice}}),current);
+        }
+        const memory=input.includeMemory===true?bridge.memory.previewContext(`private:${current.ownerQQ}`,bridge.now(),input.text):'';
+        job={controller:new AbortController(),engine:createPlaygroundEngine(next)};playgroundJobs.set(id,job);
+        disconnect=()=>{job.controller.abort();job.engine.stop();};res.on('close',disconnect);
+        const start=Date.now(),answer=await runPlayground(job.engine,next,input,{signal:job.controller.signal,memory});
+        return reply(200,{text:answer.slice(0,12000),mode:input.mode,durationMs:Date.now()-start});
+      }catch(error){return reply(400,{error:job?(job.controller.signal.aborted?'已停止试聊。':'试聊未完成，请检查模型配置、登录状态和网络后重试。'):error instanceof SyntaxError?'试聊请求格式不正确。':error.message});}
+      finally{if(disconnect)res.off('close',disconnect);if(job){job.engine.stop();playgroundJobs.delete(id);}}
+    }
+    if(req.method==='POST'&&url.pathname==='/api/workspace/pick'){
+      if(pickingDirectory)return reply(409,{error:'文件夹选择器已打开，请先完成或取消选择。'});
+      pickingDirectory=true;
+      try{return reply(200,{directory:await chooseWorkDirectory()});}
+      catch{return reply(400,{error:'未能完成文件夹选择，请重试或手动填写绝对路径。'});}
+      finally{pickingDirectory=false;}
+    }
+    if(req.method==='POST'&&url.pathname==='/api/workspace'){
+      try{
+        const raw=await readBody(req,8192,'工作目录配置太大');
+        if(req.headers['if-match']!==configRevision(current))return reply(409,{error:'后台配置已更新，请刷新配置后再选择工作目录。'});
+        bridge.assertWorkspaceIdle();
+        const selection=resolveWorkDirectory(current,JSON.parse(raw));
+        if(selection.config!==current){
+          const next=validateConfig(selection.config,current);persist(next);current=next;lastSavedAt=new Date().toISOString();onSave(next);bridge.configure(next);
+        }
+        bridge.selectProject(selection.project);
+        return reply(200,{ok:true,revision:configRevision(current),savedAt:lastSavedAt,project:selection.project,directory:selection.project?current.projects[selection.project]:path.join(STATE,'projects/default')});
+      }catch(error){return reply(error.status===409?409:400,{error:error.status===409?'请等待当前任务和排队消息结束，再切换工作目录。':['请选择已配置的工作目录。','请填写已存在的文件夹绝对路径。','目录名称冲突，请在工作空间中手动配置项目。'].includes(error.message)?error.message:'工作目录切换失败，请检查目录后重试。'});}
+    }
     if(req.method==='GET' && url.pathname==='/api/state') {
       const safe=structuredClone(current);safe.onebot.accessToken='';safe.chat.apiKey='';if(safe.voice)safe.voice.apiKey='';
-      return reply(200,{config:safe,capabilities:{unlimitedDistillRecords:true,companionOptimizations:true,nativeOmni:true},hasOnebotToken:!!current.onebot.accessToken,hasApiKey:!!current.chat.apiKey,hasVoiceKey:!!current.voice?.apiKey,revision:configRevision(current),savedAt:lastSavedAt,status:bridge.status(),logs:logs.slice(-50),baseDefault:defaults.basePersona});
+      for(const p of safe.modelProviders||[])p.apiKey='';
+      return reply(200,{config:safe,capabilities:{workbench:true,workspaceSelection:true,providerManagement:true,kimiK3Support:true,unlimitedDistillRecords:true,companionOptimizations:true,nativeOmni:true,nativeSearch:true,codexSearch:true},hasProviderKeys:providerKeyFlags(current),hasOnebotToken:!!current.onebot.accessToken,hasApiKey:!!current.chat.apiKey,hasVoiceKey:!!current.voice?.apiKey,revision:configRevision(current),savedAt:lastSavedAt,status:{...bridge.status(),projectId:bridge.project||'',workDirectory:current.projects[bridge.project]||path.join(STATE,'projects/default')},logs:logs.slice(-50),baseDefault:defaults.basePersona});
     }
     if(url.pathname==='/api/social'){
       try{
@@ -258,8 +319,8 @@ export function createConsole(bridge, { token, logs=[],config=bridge.config,onSa
         const changed=configRevision(next)!==configRevision(current);
         let applied='设置没有变化';
         if(changed){persist(next);current=next;lastSavedAt=new Date().toISOString();onSave(next);applied=bridge.configure(next);}
-        return reply(200,{ok:true,changed,applied,revision:configRevision(current),savedAt:lastSavedAt,hasOnebotToken:!!current.onebot.accessToken,hasApiKey:!!current.chat.apiKey,hasVoiceKey:!!current.voice?.apiKey});
-      }catch(error){return reply(400,{error:error.message,field:error.field||null});}
+        return reply(200,{ok:true,changed,applied,revision:configRevision(current),savedAt:lastSavedAt,hasProviderKeys:providerKeyFlags(current),hasOnebotToken:!!current.onebot.accessToken,hasApiKey:!!current.chat.apiKey,hasVoiceKey:!!current.voice?.apiKey});
+      }catch(error){return reply(400,{error:error.message,field:error.field||null,providerId:error.providerId||null});}
     }
     if(req.method==='POST' && ['/api/chat/test','/api/omni/test'].includes(url.pathname)){
       if(testing)return reply(409,{error:'已有模型连接测试正在运行，请稍候'});
@@ -267,7 +328,7 @@ export function createConsole(bridge, { token, logs=[],config=bridge.config,onSa
       try{
         let raw='';for await(const chunk of req){raw+=chunk.toString();if(Buffer.byteLength(raw)>16384)throw new Error('测试配置太大');}
         const input=resolveChat(JSON.parse(raw)),omni=url.pathname==='/api/omni/test';
-        const next=validateConfig(omni?{...current,voice:{...current.voice,...input.voice,enabled:true,mode:'omni'}}:{...current,chat:{...input.chat,provider:'openai'}},current);
+        const next=validateConfig(omni?{...current,voice:{...current.voice,...input.voice,enabled:true,mode:'omni'}}:{...current,...(input.modelProviders?{modelProviders:input.modelProviders}:{}),chat:{...input.chat,provider:'openai'}},current);
         const modelConfig=omni?{...next.voice,nativeOmni:true}:next.chat;
         const start=Date.now();let usage=null,ok=false;
         try{await testChat(modelConfig,value=>{usage=value;});ok=true;}
@@ -356,6 +417,7 @@ export function createConsole(bridge, { token, logs=[],config=bridge.config,onSa
     }
     reply(404,{error:'接口不存在'});
   });
+  server.on('close',()=>{for(const job of playgroundJobs.values()){job.controller.abort();job.engine.stop();}playgroundJobs.clear();});
   return server;
 }
 export async function main() {

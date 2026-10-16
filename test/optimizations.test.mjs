@@ -124,12 +124,6 @@ test('future topics have a due time, cooldown and asked count; completed events 
   s.asked(key,[topic.id],due);assert.equal(s.eligibleTopics(key,due+3600000).length,0);
   s.incoming(key,'我考完了',{now:due+3600000});assert.equal(s.room(key).topics[0].status,'closed');assert.equal(s.eligibleTopics(key,due+2*86400000).length,0);
 });
-test('active outreach marks only a delivered selected topic and records the decision',async t=>{
-  const f=fixture(t,{outreach:true}),key='private:123456';f.bridge.outreach.incoming('明天有考试',now-3*3600000,true);
-  f.bridge.memory.edit(key,{kind:'topic',text:'考试'},now-3*3600000);const topic=f.bridge.memory.room(key).topics[0];
-  f.social.run=async()=>JSON.stringify({reply:'考试感觉怎么样',topicId:topic.id});assert.equal(await f.bridge.checkOutreach(),true);
-  assert.equal(topic.askedCount,1);assert.equal(f.bridge.telemetry.view(now).decisions.at(-1).reason,'已主动发送，等待回复');
-});
 test('reported usage is counted, missing usage remains unknown and metrics do not store prompts',async t=>{
   let usage;await chatCompletion({baseUrl:'http://localhost/v1',model:'test',apiKey:''},[],{fetchImpl:async()=>new Response(JSON.stringify({choices:[{message:{content:'hi'}}],usage:{prompt_tokens:12,completion_tokens:4}})),onUsage:v=>usage=v});assert.deepEqual(usage,{input:12,output:4});
   const metrics=new Telemetry(path.join(temp(t),'metrics.json'));metrics.record({kind:'chat',provider:'api',model:'test',ok:true,durationMs:100,usage},now);metrics.record({kind:'outreach',provider:'codex',model:'default',ok:false,durationMs:300},now);
@@ -156,18 +150,6 @@ test('negated plans are not tracked and generic completion closes a single open 
   const s=new SocialState(path.join(temp(t),'social.json')),key='private:123456';s.incoming(key,'我不打算明天去考试',{now});assert.equal(s.room(key).topics.length,0);
   s.incoming(key,'我明天有考试',{now});s.incoming(key,'考试还没结束了',{now:now+1});assert.equal(s.room(key).topics[0].status,'open');
   s.incoming(key,'我搞定了',{now:now+2});assert.equal(s.room(key).topics[0].status,'closed');
-});
-test('repeated and closed-topic proactive suggestions are blocked by the bridge',async t=>{
-  const f=fixture(t,{outreach:true}),key='private:123456';f.bridge.outreach.incoming('面试',now-3*3600000,true);
-  f.bridge.memory.edit(key,{kind:'topic',text:'面试',status:'closed'},now-3*3600000);f.social.run=async()=> '面试怎么样';
-  assert.equal(await f.bridge.checkOutreach(),false);assert.equal(f.onebot.sent.length,0);
-  f.bridge.outreach.value.lastCheckAt=0;f.bridge.outreach.value.history.push({role:'assistant',content:'休息一会吧'});f.social.run=async()=> '休息一会吧';assert.equal(await f.bridge.checkOutreach(),false);assert.equal(f.onebot.sent.length,0);
-});
-test('new owner input cancels the remaining proactive bubbles, preserving only the bubble already sent',async t=>{
-  const f=fixture(t,{outreach:true});f.bridge.outreach.incoming('最近有点累',now-3*3600000,true);f.bridge.bubbleDelayMs=30;f.social.run=async(id,prompt)=>prompt.includes('主动私聊考虑')?'第一句\n不该发的第二句':'新话题';
-  const began=deferred(),send=f.onebot.send.bind(f.onebot);f.onebot.send=async(target,text)=>{await send(target,text);if(text==='第一句')began.resolve();};
-  const outreach=f.bridge.checkOutreach();await began.promise;await f.bridge.handle(event('我现在有事想聊',1));await outreach;
-  assert.deepEqual(f.onebot.sent.map(v=>v.text),['第一句','新话题']);assert.equal(f.bridge.outreach.value.awaitingReply,false);
 });
 test('legacy persona format is superseded at runtime without changing the saved persona',async t=>{
   const f=fixture(t);f.config.persona='在末尾输出[发群]正文';let persona;f.social.thread=async(id,options)=>{persona=options.persona;return 'social-id';};

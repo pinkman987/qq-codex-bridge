@@ -4,11 +4,12 @@ import {atomicWrite} from './config.mjs';
 export class Telemetry{
   constructor(file){this.file=file;this.value=readState(file,{days:{},recent:[],decisions:[]});}
   day(now){return new Date(now+8*3600000).toISOString().slice(0,10);}
-  record({kind,provider,model,durationMs,ok,usage=null},now=Date.now()){
+  record({kind,provider,model,durationMs,ok,usage=null,searchCalls=null},now=Date.now()){
     const key=this.day(now),d=this.value.days[key]??={calls:0,failures:0,durationMs:0,inputTokens:0,outputTokens:0,unknownUsage:0,kinds:{}};
     d.calls++;d.failures+=ok?0:1;d.durationMs+=durationMs;d.kinds[kind]=(d.kinds[kind]||0)+1;
     if(usage&&Number.isFinite(usage.input)&&Number.isFinite(usage.output)){d.inputTokens+=usage.input;d.outputTokens+=usage.output;}else d.unknownUsage++;
-    this.value.recent.push({at:now,kind,provider,model,durationMs,ok,usage});this.value.recent=this.value.recent.slice(-30);
+    if(Number.isInteger(searchCalls)&&searchCalls>=0)d.searchCalls=(d.searchCalls||0)+searchCalls;
+    this.value.recent.push({at:now,kind,provider,model,durationMs,ok,usage,...(Number.isInteger(searchCalls)?{searchCalls}:{})});this.value.recent=this.value.recent.slice(-30);
     for(const day of Object.keys(this.value.days).sort().slice(0,-14))delete this.value.days[day];this.save();
   }
   aggregate(count,now=Date.now()){

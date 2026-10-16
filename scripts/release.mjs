@@ -9,6 +9,7 @@ export function releaseFiles(root=ROOT){
   const files=['package.json','package-lock.json','.gitignore',...pkg.files];
   const result=[];
   const walk=relative=>{
+    if(/\.bak$/i.test(relative))return;
     const file=path.join(root,relative),stat=fs.lstatSync(file);
     if(stat.isSymbolicLink())throw new Error(`Cannot release symlink: ${relative}`);
     if(stat.isDirectory()){for(const name of fs.readdirSync(file).sort())walk(path.posix.join(relative,name));}

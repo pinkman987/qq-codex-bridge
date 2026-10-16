@@ -15,6 +15,7 @@ export function parseMessage(event) {
   const text = segments.filter(s=>s.type==='text').map(s=>s.data?.text??'').join('').trim();
   const faces = segments.filter(s=>s.type==='face').map(s=>String(s.data?.id??'')).filter(Boolean);
   const images = segments.filter(s=>s.type==='image').map(s=>s.data?.url||s.data?.file||'').filter(Boolean);
+  const imageFiles=segments.filter(s=>s.type==='image').filter(s=>s.data?.url||s.data?.file).map(s=>typeof s.data?.file==='string'&&s.data.file.length<=4096?s.data.file:'');
   const voice = segments.some(s=>s.type==='record'||s.type==='voice');
   const records=segments.filter(s=>s.type==='record'||s.type==='voice').map(s=>s.data?.file||'').filter(v=>typeof v==='string'&&v.length<=4096&&v);
   const mentioned = segments.some(s=>s.type==='at' && String(s.data?.qq)===String(event.self_id)) ||
@@ -22,7 +23,7 @@ export function parseMessage(event) {
   const multimodal = faces.length>0||images.length>0||voice;
   if ((!text && !multimodal) || String(event.user_id)===String(event.self_id)) return null;
   return { type:event.message_type, user:String(event.user_id), group:String(event.group_id??''), id:String(event.message_id??''),
-    name:String(event.sender?.card || event.sender?.nickname || event.user_id).slice(0,60).replace(/[\r\n]/g,' '), text:text.slice(0,12000), mentioned, faces, images, voice,records };
+    name:String(event.sender?.card || event.sender?.nickname || event.user_id).slice(0,60).replace(/[\r\n]/g,' '), text:text.slice(0,12000), mentioned, faces, images,imageFiles, voice,records };
 }
 export class OneBot extends EventEmitter {
   constructor(log) { super(); this.log=log; this.pending=new Map(); this.seq=0; this.generation=0; this.connected=false; }

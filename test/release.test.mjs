@@ -38,6 +38,7 @@ test('corrupted persistent state fails with recovery guidance and preserves orig
 test('release contains docs and workflow but excludes private runtime data',()=>{
   const files=releaseFiles();assert(files.includes('LICENSE'));assert(files.includes('.github/workflows/ci.yml'));assert(files.includes('docs/QUICKSTART.md'));
   assert(!files.includes('config.json'));assert(!files.some(v=>/^(state|node_modules)\//.test(v)));
+  assert(!files.some(v=>v.endsWith('.bak')));
   const zip=createZip([{name:'qq-codex-bridge/中文.txt',data:Buffer.from('hello')}]);assert.equal(zip.readUInt32LE(),0x04034b50);assert.equal(zip.readUInt32LE(zip.length-22),0x06054b50);
   assert.deepEqual(zip,createZip([{name:'qq-codex-bridge/中文.txt',data:Buffer.from('hello')}]));
 });
